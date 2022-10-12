@@ -1,0 +1,7 @@
+FROM golang:latest
+ADD . /peer
+WORKDIR ./peer
+COPY . .
+RUN go mod download
+RUN go build -o ./main ./Peer
+ENTRYPOINT [ "./main" ]

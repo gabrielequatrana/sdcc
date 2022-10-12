@@ -1,0 +1,7 @@
+FROM golang:latest
+ADD . /register
+WORKDIR ./register
+COPY . .
+RUN go mod download
+RUN go build -o ./main ./Register
+ENTRYPOINT [ "./main" ]

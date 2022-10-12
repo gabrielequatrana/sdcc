@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  registration_service:
+    container_name: register
+    hostname: register
+    build:
+      context: .
+      dockerfile: ./Docker/register_dockerfile
+    network_mode: host
+  peer_service:
+    #container_name: peer
+    #hostname: peer
+    build:
+      context: .
+      dockerfile: ./Docker/peer_dockerfile
+    depends_on:
+      - registration_service
+    deploy:
+      mode: replicated
+      replicas: ${PEERS}
+    network_mode: host
