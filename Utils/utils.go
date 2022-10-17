@@ -4,8 +4,14 @@ const (
 	ELECTION = iota
 	OK
 	COORDINATOR
+	HEARTBEAT
 	CLOSE
 )
+
+type Message struct {
+	ID  int
+	Msg int
+}
 
 type Peer struct {
 	ID   int

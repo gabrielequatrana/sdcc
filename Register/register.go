@@ -82,7 +82,7 @@ func main() {
 // RegisterPeer Exported API to register peer in the network
 func (t *RegisterApi) RegisterPeer(args *Utils.Peer, reply *Utils.RegistrationReply) error {
 
-	// Retrieve base peer port from config file
+	// Retrieve peer port
 	port, err := strconv.Atoi(args.Port)
 	if err != nil {
 		log.Fatalln("Atoi error: ", err)
@@ -107,7 +107,7 @@ func (t *RegisterApi) RegisterPeer(args *Utils.Peer, reply *Utils.RegistrationRe
 
 	// While number of peer registered less than initialized peer do nothing
 	for currentPeer < numPeer {
-		time.Sleep(time.Microsecond) // TODO si può fare senza sleep
+		time.Sleep(time.Microsecond) // TODO si può fare senza sleep?
 	}
 
 	// Fill the reply with peer ID and peer list
