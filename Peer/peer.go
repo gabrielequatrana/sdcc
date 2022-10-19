@@ -21,15 +21,18 @@ var peerList []Utils.Peer
 var conf Utils.Conf
 var ip, port string
 
-var msg Utils.Message
 var election bool
 var coordinator int
 var ch chan int
+var hbch chan int
 
 func main() {
 
-	ch = make(chan int)
 	fmt.Println("Peer service startup")
+
+	// Make GO channels
+	ch = make(chan int)
+	hbch = make(chan int)
 
 	// Reading config file to retrieve IP address and port
 	fmt.Println("Reading config file")
@@ -94,7 +97,7 @@ func main() {
 		log.Fatalln("Error close: ", err)
 	}
 
-	// Serve rpc request coming from other peer in a goroutine
+	// Goroutine for serve RPC request coming from other peers
 	go func() {
 		err := http.Serve(lis, nil)
 		if err != nil {
@@ -102,106 +105,98 @@ func main() {
 		}
 	}()
 
-	// HeartBeat monitoring
-	var beat Utils.Message
-	go func() {
-		for {
-			time.Sleep(time.Second * 30) // Repeat every two second
-			for _, p := range peerList {
-				if p.ID != ID {
-					fmt.Println("Peer \"", ID, "\" sending heartbeat to: ", p.ID)
-					message := Utils.Message{
-						ID:  ID,
-						Msg: Utils.HEARTBEAT,
-					}
+	// Goroutine for HeartBeat monitoring
+	go heartbeat()
 
-					cli, err := rpc.DialHTTP("tcp", p.IP+":"+p.Port)
-					if err != nil {
-						log.Fatalln("Error DialHTTP: ", err)
-					}
-
-					err = cli.Call("Peer.SendMessage", &message, &beat)
-					if err != nil {
-						log.Fatalln("Error call: ", err)
-					}
-
-					fmt.Println("Peer \"", ID, "\" received from", p.ID, ": ", beat.Msg)
-					if beat.Msg == Utils.HEARTBEAT {
-						fmt.Println("Peer \"", ID, "\" says", beat.ID, "is alive")
-					}
-				}
-			}
-		}
-	}()
-
-	// Send initial ELECTION to all
-	//sendElection()
-	//sendCoordinator()
-
-	// Initially all Peer know the coordinator
+	// TODO: Initially all Peer know the coordinator (fare in modo che non sia cosi)
 	if ID == peerList[len(peerList)-1].ID {
 		sendCoordinator()
 	}
 
-	select {
-	case msg1 := <-ch:
-		fmt.Println("SELECTED CASE ELECTION", msg1)
-	}
+	// Infinite loop executed by peer.
+	// Wait for message received in channel and call functions.
+	for {
+		select {
+		case msg1 := <-ch:
 
-	select {}
+			switch msg1 {
+
+			// If the peer receive an ELECTION message he has to create a new election
+			case Utils.ELECTION:
+				sendElection()
+				if election {
+					sendCoordinator()
+				}
+			}
+
+		case msg2 := <-hbch:
+			fmt.Println("Peer \"", ID, "\" know that peer", msg2, "is down.")
+		}
+	}
 }
 
+// SendMessage RPC method provided by peers
 func (t *api) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 
+	// Message sent by a peer
 	msg := args.Msg
 
+	// Check type of message received
 	switch msg {
+
+	// ELECTION message
 	case Utils.ELECTION:
 		fmt.Println("Peer \"", ID, "\" received: ELECTION from:", args.ID)
-		ch <- msg
-		reply.Msg = Utils.OK
 
-	case Utils.OK:
-		fmt.Println("Peer \"", ID, "\" received: OK")
-		reply.Msg = Utils.OK
+		// If the current peer has a greater id, send OK message.
+		if ID > args.ID {
+			reply.Msg = Utils.OK
+			ch <- msg // Send message to channel
+		}
 
+		// TODO cosa fa altrimenti?
+		// TODO (in realta credo non serva perche gli ELECTION vengono inviati solo ai peer con id minori)
+
+	// COORDINATOR message
 	case Utils.COORDINATOR:
-		fmt.Println("Peer \"", ID, "\" received: COORDINATOR from:", args.ID)
-		coordinator = args.ID
 		fmt.Println("Peer \"", ID, "\" recognized as coordinator", args.ID)
 
+		// Set coordinator ID
+		coordinator = args.ID
+
+	// HEARTBEAT message
 	case Utils.HEARTBEAT:
 		fmt.Println("Peer \"", ID, "\" received: HEARTBEAT from:", args.ID)
-		reply.Msg = ID
+
+		// Set reply msg parameters
+		reply.ID = ID
 		reply.Msg = Utils.HEARTBEAT
 	}
 
+	// No error to manage
 	return nil
 }
 
 // Send ELECTION message to all peers with greater id
 func sendElection() {
-	election = true
+	var reply Utils.Message // Reply message
+	election = true         // The current peer take part in the election
+
+	// Send ELECTION to peers
 	for _, p := range peerList {
 		if p.ID > ID {
 			fmt.Println("Peer \"", ID, "\" sending initial election to: ", p.ID)
-			message := Utils.Message{
-				ID:  ID,
-				Msg: Utils.ELECTION,
-			}
 
-			cli, err := rpc.DialHTTP("tcp", p.IP+":"+p.Port)
-			if err != nil {
-				log.Fatalln("Error DialHTTP: ", err)
-			}
-
-			err = cli.Call("Peer.SendMessage", &message, &msg)
+			// Send message to p
+			err := send(ID, Utils.ELECTION, p, &reply)
 			if err != nil {
 				log.Fatalln("Error call: ", err)
 			}
 
-			fmt.Println("Peer \"", ID, "\" received from", p.ID, ": ", msg.Msg)
-			if msg.Msg == Utils.OK && election {
+			fmt.Println("Peer \"", ID, "\" received from", p.ID, ": ", reply.Msg)
+
+			// If the current peer receive an OK message, it exits the election
+			if reply.Msg == Utils.OK && election {
 				election = false
 				fmt.Println("Peer \"", ID, "\" exit the election")
 			}
@@ -209,24 +204,78 @@ func sendElection() {
 	}
 }
 
+// Send COORDINATOR message to all peers
 func sendCoordinator() {
+	var reply Utils.Message // Reply message
+
+	// Set coordinator as peer id
 	coordinator = ID
 	fmt.Println("Peer \"", ID, "\" recognized as coordinator himself")
-	for _, p := range peerList[:len(peerList)-1] {
-		fmt.Println("Peer \"", ID, "\" sending COORDINATOR to: ", p.ID)
-		message := Utils.Message{
-			ID:  ID,
-			Msg: Utils.COORDINATOR,
-		}
 
-		cli, err := rpc.DialHTTP("tcp", p.IP+":"+p.Port)
-		if err != nil {
-			log.Fatalln("Error DialHTTP: ", err)
-		}
+	// Send COORDINATOR to peers
+	for _, p := range peerList {
+		if p.ID != ID {
+			fmt.Println("Peer \"", ID, "\" sending COORDINATOR to: ", p.ID)
 
-		err = cli.Call("Peer.SendMessage", &message, &msg)
-		if err != nil {
-			log.Fatalln("Error call: ", err)
+			// Send message to p
+			err := send(ID, Utils.COORDINATOR, p, &reply)
+			if err != nil {
+				log.Fatalln("Error call: ", err)
+			}
 		}
 	}
+}
+
+// Check peers status by sending heartbeat message
+func heartbeat() {
+
+	// Execute an infinite loop
+	for {
+		time.Sleep(time.Second * 30) // TODO Repeat every two second (creare parametro)
+
+		// Send heartbeat to all peers
+		for _, p := range peerList {
+			beat := new(Utils.Message)
+			if p.ID != ID {
+				fmt.Println("Peer \"", ID, "\" sending heartbeat to: ", p.ID)
+
+				// Send heartbeat to p, if p crashed send ERROR to heartbeat channel
+				err := send(ID, Utils.HEARTBEAT, p, beat)
+				if err != nil {
+					fmt.Println("Peer \"", ID, "\" BEAT NOT RECEIVED from: ", p.ID)
+					hbch <- p.ID
+				}
+
+				// If the peer responds than it is alive
+				if beat.Msg == Utils.HEARTBEAT {
+					fmt.Println("Peer \"", ID, "\" says", beat.ID, "is alive")
+				}
+			}
+		}
+	}
+}
+
+// Send a message to a specific peer
+func send(id int, msg int, peer Utils.Peer, reply *Utils.Message) error {
+
+	// Make a new message to send
+	message := Utils.Message{
+		ID:  id,
+		Msg: msg,
+	}
+
+	// Connect to the receiver peer
+	cli, err := rpc.DialHTTP("tcp", peer.IP+":"+peer.Port)
+	if err != nil {
+		return err
+	}
+
+	// Call the RPC method SendMessage exposed by the receiver peer
+	err = cli.Call("Peer.SendMessage", &message, &reply)
+	if err != nil {
+		return err
+	}
+
+	// Return nil if there's no error
+	return nil
 }
