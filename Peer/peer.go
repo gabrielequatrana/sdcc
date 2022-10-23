@@ -28,6 +28,13 @@ var hbtime int
 var ch chan int
 var hbch chan int
 
+// TODO aggiungere delay ai messaggi
+// TODO aggiungere riprovare un certo numero di volte ai messaggi
+// TODO Spostare logica bully in un altro file
+// TODO Aggiungere logica altro algoritmo
+// TODO Sistemare bug (Conosciuti: ogni tanto non cancella le immagini docker alla fine,
+// TODO vedere se è possibile stampare in ordine, ...)
+
 func main() {
 
 	fmt.Println("Peer service startup")
