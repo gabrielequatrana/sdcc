@@ -43,6 +43,7 @@ func main() {
 	// Set application flags
 	aflag := flag.String("a", "", "Election algorithm")
 	nflag := flag.Int("n", 0, "Number of peers")
+	hbflag := flag.Int("hb", 2, "Heartbeat repeat time")
 	vflag := flag.Bool("v", false, "Verbose")
 
 	// Retrieve flags value
@@ -69,6 +70,11 @@ func main() {
 	if *vflag {
 		mp["VERBOSE"] = "1"
 	}
+
+	// Set hbtime in .env file
+	mp["HEARTBEAT"] = strconv.Itoa(*hbflag)
+
+	// Write .env file
 	err = godotenv.Write(mp, ".env")
 	if err != nil {
 		log.Fatalln("Write env error: ", err)

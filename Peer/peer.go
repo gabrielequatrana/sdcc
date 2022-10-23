@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/joho/godotenv"
 	"github.com/phayes/freeport"
 	"log"
 	"net"
@@ -23,12 +24,25 @@ var ip, port string
 
 var election bool
 var coordinator int
+var hbtime int
 var ch chan int
 var hbch chan int
 
 func main() {
 
 	fmt.Println("Peer service startup")
+
+	// Load .env file
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalln("Load env error: ", err)
+	}
+
+	// Setting heartbeat time
+	hbtime, err = strconv.Atoi(os.Getenv("HEARTBEAT"))
+	if err != nil {
+		log.Fatalln("Atoi error: ", err)
+	}
 
 	// Make GO channels
 	ch = make(chan int)
@@ -99,7 +113,7 @@ func main() {
 
 	// Goroutine for serve RPC request coming from other peers
 	go func() {
-		err := http.Serve(lis, nil)
+		err = http.Serve(lis, nil)
 		if err != nil {
 			log.Fatalln("Error serve: ", err)
 		}
@@ -108,29 +122,36 @@ func main() {
 	// Goroutine for HeartBeat monitoring
 	go heartbeat()
 
-	// TODO: Initially all Peer know the coordinator (fare in modo che non sia cosi)
-	if ID == peerList[len(peerList)-1].ID {
-		sendCoordinator()
+	// Initially only the Peer with smaller id sends the ELECTION message
+	if ID == peerList[0].ID {
+		sendElection()
+		if election {
+			sendCoordinator()
+		}
 	}
 
 	// Infinite loop executed by peer.
 	// Wait for message received in channel and call functions.
 	for {
 		select {
-		case msg1 := <-ch:
-
-			switch msg1 {
-
+		case <-ch:
 			// If the peer receive an ELECTION message he has to create a new election
-			case Utils.ELECTION:
+			sendElection()
+			if election && coordinator != ID {
+				sendCoordinator()
+			}
+
+		// Peer msg2 down
+		case id := <-hbch:
+			fmt.Println("Peer \"", ID, "\" know that peer", id, "is down.")
+
+			// If the peer down is the coordinator make a new election
+			if id == coordinator && !election {
 				sendElection()
 				if election {
 					sendCoordinator()
 				}
 			}
-
-		case msg2 := <-hbch:
-			fmt.Println("Peer \"", ID, "\" know that peer", msg2, "is down.")
 		}
 	}
 }
@@ -149,13 +170,8 @@ func (t *api) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 		fmt.Println("Peer \"", ID, "\" received: ELECTION from:", args.ID)
 
 		// If the current peer has a greater id, send OK message.
-		if ID > args.ID {
-			reply.Msg = Utils.OK
-			ch <- msg // Send message to channel
-		}
-
-		// TODO cosa fa altrimenti?
-		// TODO (in realta credo non serva perche gli ELECTION vengono inviati solo ai peer con id minori)
+		reply.Msg = Utils.OK
+		ch <- msg // Send message to channel
 
 	// COORDINATOR message
 	case Utils.COORDINATOR:
@@ -185,7 +201,7 @@ func sendElection() {
 	// Send ELECTION to peers
 	for _, p := range peerList {
 		if p.ID > ID {
-			fmt.Println("Peer \"", ID, "\" sending initial election to: ", p.ID)
+			fmt.Println("Peer \"", ID, "\" sending ELECTION to: ", p.ID)
 
 			// Send message to p
 			err := send(ID, Utils.ELECTION, p, &reply)
@@ -231,7 +247,8 @@ func heartbeat() {
 
 	// Execute an infinite loop
 	for {
-		time.Sleep(time.Second * 30) // TODO Repeat every two second (creare parametro)
+		// Repeat every hbtime seconds
+		time.Sleep(time.Second * time.Duration(hbtime))
 
 		// Send heartbeat to all peers
 		for _, p := range peerList {
