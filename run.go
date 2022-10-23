@@ -14,6 +14,7 @@ import (
 func main() {
 
 	// Handle SIGINT
+	// Clear execution environment
 	go func() {
 		sigchan := make(chan os.Signal)
 		signal.Notify(sigchan, os.Interrupt)
@@ -37,6 +38,12 @@ func main() {
 			}
 		}
 
+		// Delete .env file
+		err = os.Remove(".env")
+		if err != nil {
+			log.Fatalln("Remove error: ", err)
+		}
+
 		os.Exit(0)
 	}()
 
@@ -55,8 +62,14 @@ func main() {
 		os.Exit(0)
 	}
 
+	// Create and open .env file
+	file, err := os.Create(".env")
+	if err != nil {
+		log.Fatalln("Crate error: ", err)
+	}
+
 	// Load .env file
-	err := godotenv.Load()
+	err = godotenv.Load()
 	if err != nil {
 		log.Fatalln("Load env error: ", err)
 	}
@@ -78,6 +91,12 @@ func main() {
 	err = godotenv.Write(mp, ".env")
 	if err != nil {
 		log.Fatalln("Write env error: ", err)
+	}
+
+	// Close .env file
+	err = file.Close()
+	if err != nil {
+		log.Fatalln("Close env error: ", err)
 	}
 
 	// Exec command 'docker compose build'
