@@ -6,6 +6,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/phayes/freeport"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/rpc"
@@ -24,25 +25,50 @@ var ip, port string
 
 var election bool
 var coordinator int
+var algo string
+var delay int
+var tries int
 var hbtime int
 var ch chan int
 var hbch chan int
 
-// TODO aggiungere delay ai messaggi
-// TODO aggiungere riprovare un certo numero di volte ai messaggi
-// TODO Spostare logica bully in un altro file
 // TODO Aggiungere logica altro algoritmo
 // TODO Sistemare bug (Conosciuti: ogni tanto non cancella le immagini docker alla fine,
 // TODO vedere se è possibile stampare in ordine, ...)
+// TODO Aggiungere VERBOSE
 
 func main() {
 
 	fmt.Println("Peer service startup")
 
+	// Set randomizer seed
+	rand.Seed(time.Now().UnixNano())
+
 	// Load .env file
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatalln("Load env error: ", err)
+	}
+
+	// Setting tries
+	tries, err = strconv.Atoi(os.Getenv("TRIES"))
+	if err != nil {
+		log.Fatalln("Atoi error: ", err)
+	}
+
+	// Setting delay
+	delay, err = strconv.Atoi(os.Getenv("DELAY"))
+	if err != nil {
+		log.Fatalln("Atoi error: ", err)
+	}
+
+	// Setting algorithm type
+	var a Algorithm
+	algo = os.Getenv("ALGO")
+	if algo == "bully" {
+		a = Bully{}
+	} else {
+		a = Ring{}
 	}
 
 	// Setting heartbeat time
@@ -131,10 +157,7 @@ func main() {
 
 	// Initially only the Peer with smaller id sends the ELECTION message
 	if ID == peerList[0].ID {
-		sendElection()
-		if election {
-			sendCoordinator()
-		}
+		newElection(a)
 	}
 
 	// Infinite loop executed by peer.
@@ -143,10 +166,7 @@ func main() {
 		select {
 		case <-ch:
 			// If the peer receive an ELECTION message he has to create a new election
-			sendElection()
-			if election && coordinator != ID {
-				sendCoordinator()
-			}
+			newElection(a)
 
 		// Peer msg2 down
 		case id := <-hbch:
@@ -154,10 +174,7 @@ func main() {
 
 			// If the peer down is the coordinator make a new election
 			if id == coordinator && !election {
-				sendElection()
-				if election {
-					sendCoordinator()
-				}
+				newElection(a)
 			}
 		}
 	}
@@ -196,58 +213,70 @@ func (t *api) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 		reply.Msg = Utils.HEARTBEAT
 	}
 
+	// Random delay in ms
+	d := rand.Intn(delay * 1000)
+	fmt.Println("Peer \"", ID, "\" generated this delay in ms:", d)
+	time.Sleep(time.Duration(d) * time.Millisecond)
+
 	// No error to manage
 	return nil
 }
 
-// Send ELECTION message to all peers with greater id
-func sendElection() {
-	var reply Utils.Message // Reply message
-	election = true         // The current peer take part in the election
-
-	// Send ELECTION to peers
-	for _, p := range peerList {
-		if p.ID > ID {
-			fmt.Println("Peer \"", ID, "\" sending ELECTION to: ", p.ID)
-
-			// Send message to p
-			err := send(ID, Utils.ELECTION, p, &reply)
-			if err != nil {
-				log.Fatalln("Error call: ", err)
-			}
-
-			fmt.Println("Peer \"", ID, "\" received from", p.ID, ": ", reply.Msg)
-
-			// If the current peer receive an OK message, it exits the election
-			if reply.Msg == Utils.OK && election {
-				election = false
-				fmt.Println("Peer \"", ID, "\" exit the election")
-			}
-		}
+func newElection(alg Algorithm) {
+	alg.sendElection()
+	if election {
+		alg.sendCoordinator()
 	}
 }
+
+// Send ELECTION message to all peers with greater id
+//func sendElection() {
+//	var reply Utils.Message // Reply message
+//	election = true         // The current peer take part in the election
+//
+//	// Send ELECTION to peers
+//	for _, p := range peerList {
+//		if p.ID > ID {
+//			fmt.Println("Peer \"", ID, "\" sending ELECTION to: ", p.ID)
+//
+//			// Send message to p
+//			err := send(ID, Utils.ELECTION, p, &reply)
+//			if err != nil {
+//				log.Fatalln("Error call: ", err)
+//			}
+//
+//			fmt.Println("Peer \"", ID, "\" received from", p.ID, ": ", reply.Msg)
+//
+//			// If the current peer receive an OK message, it exits the election
+//			if reply.Msg == Utils.OK && election {
+//				election = false
+//				fmt.Println("Peer \"", ID, "\" exit the election")
+//			}
+//		}
+//	}
+//}
 
 // Send COORDINATOR message to all peers
-func sendCoordinator() {
-	var reply Utils.Message // Reply message
-
-	// Set coordinator as peer id
-	coordinator = ID
-	fmt.Println("Peer \"", ID, "\" recognized as coordinator himself")
-
-	// Send COORDINATOR to peers
-	for _, p := range peerList {
-		if p.ID != ID {
-			fmt.Println("Peer \"", ID, "\" sending COORDINATOR to: ", p.ID)
-
-			// Send message to p
-			err := send(ID, Utils.COORDINATOR, p, &reply)
-			if err != nil {
-				log.Fatalln("Error call: ", err)
-			}
-		}
-	}
-}
+//func sendCoordinator() {
+//	var reply Utils.Message // Reply message
+//
+//	// Set coordinator as peer id
+//	coordinator = ID
+//	fmt.Println("Peer \"", ID, "\" recognized as coordinator himself")
+//
+//	// Send COORDINATOR to peers
+//	for _, p := range peerList {
+//		if p.ID != ID {
+//			fmt.Println("Peer \"", ID, "\" sending COORDINATOR to: ", p.ID)
+//
+//			// Send message to p
+//			err := send(ID, Utils.COORDINATOR, p, &reply)
+//			if err != nil {
+//				log.Fatalln("Error call: ", err)
+//			}
+//		}
+//	}
+//}
 
 // Check peers status by sending heartbeat message
 func heartbeat() {
@@ -288,16 +317,33 @@ func send(id int, msg int, peer Utils.Peer, reply *Utils.Message) error {
 		Msg: msg,
 	}
 
-	// Connect to the receiver peer
-	cli, err := rpc.DialHTTP("tcp", peer.IP+":"+peer.Port)
-	if err != nil {
-		return err
-	}
+	// Repeat send message "tries" times if the send raise an error
+	for i := 1; i <= tries; i++ {
 
-	// Call the RPC method SendMessage exposed by the receiver peer
-	err = cli.Call("Peer.SendMessage", &message, &reply)
-	if err != nil {
-		return err
+		// Random delay in ms
+		d := rand.Intn(delay * 1000)
+		fmt.Println("Peer \"", ID, "\" generated this delay in ms:", d)
+		time.Sleep(time.Duration(d) * time.Millisecond)
+
+		// Connect to the receiver peer
+		cli, err := rpc.DialHTTP("tcp", peer.IP+":"+peer.Port)
+		if err != nil {
+			if i != tries {
+				continue
+			}
+			return err
+		}
+
+		// Call the RPC method SendMessage exposed by the receiver peer
+		err = cli.Call("Peer.SendMessage", &message, &reply)
+		if err != nil {
+			if i != tries {
+				continue
+			}
+			return err
+		}
+
+		break
 	}
 
 	// Return nil if there's no error

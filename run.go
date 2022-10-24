@@ -50,6 +50,8 @@ func main() {
 	// Set application flags
 	aflag := flag.String("a", "", "Election algorithm")
 	nflag := flag.Int("n", 0, "Number of peers")
+	dflag := flag.Int("d", 2, "Delay in seconds to send a message")
+	rflag := flag.Int("r", 3, "Number of tries to send a message")
 	hbflag := flag.Int("hb", 2, "Heartbeat repeat time")
 	vflag := flag.Bool("v", false, "Verbose")
 
@@ -57,7 +59,7 @@ func main() {
 	flag.Parse()
 
 	// Check correctness of flags
-	if *nflag <= 0 || (*aflag != "bully") {
+	if *nflag <= 0 || (*aflag != "bully" && *aflag != "ring") {
 		flag.Usage()
 		os.Exit(0)
 	}
@@ -86,6 +88,15 @@ func main() {
 
 	// Set hbtime in .env file
 	mp["HEARTBEAT"] = strconv.Itoa(*hbflag)
+
+	// Set algorithm type in .env file
+	mp["ALGO"] = *aflag
+
+	// Set delay in .env file
+	mp["DELAY"] = strconv.Itoa(*dflag)
+
+	// Set tries in .env file
+	mp["TRIES"] = strconv.Itoa(*rflag)
 
 	// Write .env file
 	err = godotenv.Write(mp, ".env")
