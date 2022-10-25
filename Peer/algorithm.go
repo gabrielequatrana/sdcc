@@ -6,14 +6,17 @@ import (
 	"prog/Utils"
 )
 
+// Algorithm interface that define the two method of the 2 algorithm of distributed election
 type Algorithm interface {
 	sendElection()
 	sendCoordinator()
 }
 
+// Bully and Ring are structs that implements the Algorithm interface methods
 type Bully struct{}
 type Ring struct{}
 
+// SendElection method of Bully Algorithm
 func (b Bully) sendElection() {
 	var reply Utils.Message // Reply message
 	election = true         // The current peer take part in the election
@@ -40,10 +43,30 @@ func (b Bully) sendElection() {
 	}
 }
 
+// SendElection method of Ring Algorithm
 func (r Ring) sendElection() {
+	var reply Utils.Message
+	fmt.Println(reply)
 
+	// Send election message to the next peer in the ring
+	for i := 1; i <= len(peerList); i++ {
+		peerID := (ID + i) % len(peerList)
+		if peerID == ID {
+			fmt.Println("EXIT CYCLE") // TODO
+		}
+		peer := peerList[peerID]
+		fmt.Println("SEUM:", peerID)
+
+		err := send(ID, Utils.ELECTION, peer, &reply)
+		if err != nil {
+			continue // If cant contact next peer in the ring, try to contact the other next?
+		}
+
+		break
+	}
 }
 
+// SendCoordinator method of Bully Algorithm
 func (b Bully) sendCoordinator() {
 	var reply Utils.Message // Reply message
 
@@ -65,6 +88,7 @@ func (b Bully) sendCoordinator() {
 	}
 }
 
+// SendCoordinator method of Ring Algorithm
 func (r Ring) sendCoordinator() {
 
 }

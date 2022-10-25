@@ -11,7 +11,7 @@ const (
 
 // Message struct
 type Message struct {
-	ID  int
+	ID  []int
 	Msg int
 }
 

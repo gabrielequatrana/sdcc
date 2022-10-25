@@ -153,7 +153,7 @@ func main() {
 	}()
 
 	// Goroutine for HeartBeat monitoring
-	go heartbeat()
+	//go heartbeat()
 
 	// Initially only the Peer with smaller id sends the ELECTION message
 	if ID == peerList[0].ID {
@@ -202,14 +202,14 @@ func (t *api) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 		fmt.Println("Peer \"", ID, "\" recognized as coordinator", args.ID)
 
 		// Set coordinator ID
-		coordinator = args.ID
+		coordinator = args.ID[0]
 
 	// HEARTBEAT message
 	case Utils.HEARTBEAT:
 		fmt.Println("Peer \"", ID, "\" received: HEARTBEAT from:", args.ID)
 
 		// Set reply msg parameters
-		reply.ID = ID
+		reply.ID[0] = ID
 		reply.Msg = Utils.HEARTBEAT
 	}
 
@@ -228,55 +228,6 @@ func newElection(alg Algorithm) {
 		alg.sendCoordinator()
 	}
 }
-
-// Send ELECTION message to all peers with greater id
-//func sendElection() {
-//	var reply Utils.Message // Reply message
-//	election = true         // The current peer take part in the election
-//
-//	// Send ELECTION to peers
-//	for _, p := range peerList {
-//		if p.ID > ID {
-//			fmt.Println("Peer \"", ID, "\" sending ELECTION to: ", p.ID)
-//
-//			// Send message to p
-//			err := send(ID, Utils.ELECTION, p, &reply)
-//			if err != nil {
-//				log.Fatalln("Error call: ", err)
-//			}
-//
-//			fmt.Println("Peer \"", ID, "\" received from", p.ID, ": ", reply.Msg)
-//
-//			// If the current peer receive an OK message, it exits the election
-//			if reply.Msg == Utils.OK && election {
-//				election = false
-//				fmt.Println("Peer \"", ID, "\" exit the election")
-//			}
-//		}
-//	}
-//}
-
-// Send COORDINATOR message to all peers
-//func sendCoordinator() {
-//	var reply Utils.Message // Reply message
-//
-//	// Set coordinator as peer id
-//	coordinator = ID
-//	fmt.Println("Peer \"", ID, "\" recognized as coordinator himself")
-//
-//	// Send COORDINATOR to peers
-//	for _, p := range peerList {
-//		if p.ID != ID {
-//			fmt.Println("Peer \"", ID, "\" sending COORDINATOR to: ", p.ID)
-//
-//			// Send message to p
-//			err := send(ID, Utils.COORDINATOR, p, &reply)
-//			if err != nil {
-//				log.Fatalln("Error call: ", err)
-//			}
-//		}
-//	}
-//}
 
 // Check peers status by sending heartbeat message
 func heartbeat() {
@@ -312,8 +263,9 @@ func heartbeat() {
 func send(id int, msg int, peer Utils.Peer, reply *Utils.Message) error {
 
 	// Make a new message to send
+	c := []int{id}
 	message := Utils.Message{
-		ID:  id,
+		ID:  c,
 		Msg: msg,
 	}
 
