@@ -23,15 +23,20 @@ func main() {
 
 		// Exec command 'docker compose down'
 		cmd := exec.Command("cmd.exe", "/c", "start", "docker", "compose", "down")
-		err := cmd.Start()
+		_, err := cmd.Output()
 		if err != nil {
 			log.Fatalln("Command exec error: ", err)
 		}
 
 		// Exec command 'docker rmi all'
-		out, _ := exec.Command("cmd.exe", "/c", "docker", "images", "-a", "-q").Output()
-		for _, img := range out {
-			cmd = exec.Command("cmd.exe", "/c", "docker", "rmi", string(img))
+		out, err := exec.Command("cmd.exe", "/c", "docker", "images", "-a", "-q").Output()
+		if err != nil {
+			log.Fatalln("Command exec error: ", err)
+		}
+
+		// Delete all images
+		for i := 0; i < len(out); i += 13 {
+			cmd = exec.Command("cmd.exe", "/c", "docker", "rmi", string(out[i:i+12]))
 			err = cmd.Start()
 			if err != nil {
 				log.Fatalln("Command exec error: ", err)

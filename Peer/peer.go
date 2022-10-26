@@ -29,12 +29,16 @@ var algo string
 var delay int
 var tries int
 var hbtime int
-var ch chan int
+var ch chan Utils.Message
 var hbch chan int
 
-// TODO Aggiungere logica altro algoritmo
-// TODO Sistemare bug (Conosciuti: ogni tanto non cancella le immagini docker alla fine,
-// TODO vedere se è possibile stampare in ordine, ...)
+var ring []int // Solo per Ring
+var alg bool   // Se true Bully
+
+// TODO Ring: gestire crash
+// TODO Sistemare visibilita codice (Fa schifo)
+// TODO Vedere se si può rimuovere api int e fare due send in base a bully e ring
+// TODO Sistemare bug (Conosciuti: vedere se è possibile stampare in ordine, ...)
 // TODO Aggiungere VERBOSE
 
 func main() {
@@ -66,8 +70,10 @@ func main() {
 	var a Algorithm
 	algo = os.Getenv("ALGO")
 	if algo == "bully" {
+		alg = true
 		a = Bully{}
 	} else {
+		alg = false
 		a = Ring{}
 	}
 
@@ -78,7 +84,7 @@ func main() {
 	}
 
 	// Make GO channels
-	ch = make(chan int)
+	ch = make(chan Utils.Message)
 	hbch = make(chan int)
 
 	// Reading config file to retrieve IP address and port
@@ -164,9 +170,20 @@ func main() {
 	// Wait for message received in channel and call functions.
 	for {
 		select {
-		case <-ch:
+		case msg := <-ch:
 			// If the peer receive an ELECTION message he has to create a new election
-			newElection(a)
+			if alg {
+				newElection(a)
+			} else {
+				fmt.Println("SIUM:", msg)
+				if msg.ID[0] == ID {
+					coordinator = msg.ID[len(msg.ID)-1]
+					fmt.Println("Found coordinator", coordinator)
+					a.sendCoordinator()
+				} else {
+					a.sendElection()
+				}
+			}
 
 		// Peer msg2 down
 		case id := <-hbch:
@@ -194,8 +211,13 @@ func (t *api) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 		fmt.Println("Peer \"", ID, "\" received: ELECTION from:", args.ID)
 
 		// If the current peer has a greater id, send OK message.
-		reply.Msg = Utils.OK
-		ch <- msg // Send message to channel
+		if alg {
+			reply.Msg = Utils.OK
+			ch <- *args // Send message to channel
+		} else {
+			ring = args.ID
+			ch <- *args
+		}
 
 	// COORDINATOR message
 	case Utils.COORDINATOR:
@@ -244,7 +266,7 @@ func heartbeat() {
 				fmt.Println("Peer \"", ID, "\" sending heartbeat to: ", p.ID)
 
 				// Send heartbeat to p, if p crashed send ERROR to heartbeat channel
-				err := send(ID, Utils.HEARTBEAT, p, beat)
+				err := send([]int{ID}, Utils.HEARTBEAT, p, beat)
 				if err != nil {
 					fmt.Println("Peer \"", ID, "\" BEAT NOT RECEIVED from: ", p.ID)
 					hbch <- p.ID
@@ -260,12 +282,11 @@ func heartbeat() {
 }
 
 // Send a message to a specific peer
-func send(id int, msg int, peer Utils.Peer, reply *Utils.Message) error {
+func send(id []int, msg int, peer Utils.Peer, reply *Utils.Message) error {
 
 	// Make a new message to send
-	c := []int{id}
 	message := Utils.Message{
-		ID:  c,
+		ID:  id,
 		Msg: msg,
 	}
 
