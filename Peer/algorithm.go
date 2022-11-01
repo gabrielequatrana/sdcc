@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"prog/Utils"
 )
 
@@ -29,7 +28,7 @@ func (b Bully) sendElection() {
 			// Send message to p
 			err := send([]int{ID}, Utils.ELECTION, p, &reply)
 			if err != nil {
-				log.Fatalln("Error call: ", err)
+				continue // Peer crashed
 			}
 
 			fmt.Println("Peer \"", ID, "\" received from", p.ID, ": ", reply.Msg)
@@ -45,25 +44,27 @@ func (b Bully) sendElection() {
 
 // SendElection method of Ring Algorithm
 func (r Ring) sendElection() {
-	var reply Utils.Message
-	fmt.Println(reply)
+	var reply Utils.Message // Reply message
 
+	// Append to the election the peer id
 	ring = append(ring, ID)
 
 	// Send election message to the next peer in the
 	for i := 1; i <= len(peerList); i++ {
-		peerID := (ID + i) % len(peerList)
+		peerID := (ID + i) % len(peerList) // ID of the next peer
+
+		// If the next peer on the list is the peer himself, break the loop
 		if peerID == ID {
-			fmt.Println("EXIT CYCLE") // TODO
 			break
 		}
 
+		// Get the peer struct from the list
 		peer := peerList[peerID]
-		fmt.Println("SEUM:", peerID)
 
+		// Send message to the peer
 		err := send(ring, Utils.ELECTION, peer, &reply)
 		if err != nil {
-			continue // If cant contact next peer in the ring, try to contact the other next?
+			continue // If cant contact the peer, try contacting the next one on the ring
 		}
 
 		break
@@ -86,7 +87,7 @@ func (b Bully) sendCoordinator() {
 			// Send message to p
 			err := send([]int{ID}, Utils.COORDINATOR, p, &reply)
 			if err != nil {
-				log.Fatalln("Error call: ", err)
+				continue // Peer crashed
 			}
 		}
 	}
@@ -107,7 +108,7 @@ func (r Ring) sendCoordinator() {
 			// Send message to p
 			err := send([]int{coordinator}, Utils.COORDINATOR, p, &reply)
 			if err != nil {
-				log.Fatalln("Error call: ", err)
+				continue // Peer crashed
 			}
 		}
 	}

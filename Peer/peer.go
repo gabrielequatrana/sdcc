@@ -16,31 +16,32 @@ import (
 	"time"
 )
 
-type api int
+type api int // Used to publish RPC method
 
-var ID int
-var peerList []Utils.Peer
-var conf Utils.Conf
-var ip, port string
+var ID int                // Peer id
+var peerList []Utils.Peer // List of other peers in the network
+var conf Utils.Conf       // Configuration of peer and register service
+var ip, port string       // IP address and port of the peer
+var verbose = false       // Verbose flag
 
-var election bool
-var coordinator int
-var algo string
-var delay int
-var tries int
-var hbtime int
-var ch chan Utils.Message
-var hbch chan int
+var coordinator int // ID of the coordinator peer
+var algo string     // Name of current election algorithm
+var delay int       // Maximum delay to send a message
+var tries int       // Maximum number of tries to send a message
+var hbtime int      // Repetition interval of heartbeat service
 
-var ring []int // Solo per Ring
-var alg bool   // Se true Bully
+var ch chan Utils.Message // Go channel to manage messages
+var hbch chan int         // Go channel to manage heartbeat messages
 
-// TODO Ring: gestire crash
-// TODO Sistemare visibilita codice (Fa schifo)
-// TODO Vedere se si può rimuovere api int e fare due send in base a bully e ring
-// TODO Sistemare bug (Conosciuti: vedere se è possibile stampare in ordine, ...)
-// TODO Aggiungere VERBOSE
+var election bool // Used only by Bully algorithm. If true, the peer is part of an election
+var ring []int    // Used only by Ring algorithm. Contains the peers that are part of the election
+var alg bool      // If true then Bully algorithm, else Ring algorithm
 
+// TODO SISTEMARE i print e mettere verbose
+// TODO Vedere se è possibile stampare in ordine
+// TODO Vedere se aggiungere gob per marshaling
+
+// Peer main
 func main() {
 
 	fmt.Println("Peer service startup")
@@ -52,6 +53,11 @@ func main() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatalln("Load env error: ", err)
+	}
+
+	// Setting verbose flag
+	if os.Getenv("VERBOSE") == "1" {
+		verbose = true
 	}
 
 	// Setting tries
@@ -159,7 +165,7 @@ func main() {
 	}()
 
 	// Goroutine for HeartBeat monitoring
-	//go heartbeat()
+	go heartbeat()
 
 	// Initially only the Peer with smaller id sends the ELECTION message
 	if ID == peerList[0].ID {
@@ -171,16 +177,19 @@ func main() {
 	for {
 		select {
 		case msg := <-ch:
-			// If the peer receive an ELECTION message he has to create a new election
+			// Check algorithm type
 			if alg {
+				// If the peer receive an ELECTION message he has to create a new election
 				newElection(a)
 			} else {
-				fmt.Println("SIUM:", msg)
+				// Check if the election was sent by the peer itself
 				if msg.ID[0] == ID {
+					// Send COORDINATOR message
 					coordinator = msg.ID[len(msg.ID)-1]
 					fmt.Println("Found coordinator", coordinator)
 					a.sendCoordinator()
 				} else {
+					// Send election to the next peer
 					a.sendElection()
 				}
 			}
@@ -210,13 +219,13 @@ func (t *api) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 	case Utils.ELECTION:
 		fmt.Println("Peer \"", ID, "\" received: ELECTION from:", args.ID)
 
-		// If the current peer has a greater id, send OK message.
+		// Check algorithm type
 		if alg {
-			reply.Msg = Utils.OK
-			ch <- *args // Send message to channel
+			reply.Msg = Utils.OK // Send OK message in response
+			ch <- *args          // Send message to channel
 		} else {
-			ring = args.ID
-			ch <- *args
+			ring = args.ID // Add peer id to the election
+			ch <- *args    // Send message to channel
 		}
 
 	// COORDINATOR message
@@ -231,7 +240,7 @@ func (t *api) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 		fmt.Println("Peer \"", ID, "\" received: HEARTBEAT from:", args.ID)
 
 		// Set reply msg parameters
-		reply.ID[0] = ID
+		reply.ID = []int{ID}
 		reply.Msg = Utils.HEARTBEAT
 	}
 
@@ -244,6 +253,7 @@ func (t *api) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 	return nil
 }
 
+// Start a new election in Bully algorithm
 func newElection(alg Algorithm) {
 	alg.sendElection()
 	if election {
@@ -269,6 +279,8 @@ func heartbeat() {
 				err := send([]int{ID}, Utils.HEARTBEAT, p, beat)
 				if err != nil {
 					fmt.Println("Peer \"", ID, "\" BEAT NOT RECEIVED from: ", p.ID)
+					peerList = append(peerList[:p.ID], peerList[p.ID+1:]...)
+					fmt.Println("SSSSSSSSSSSSSS: ", peerList)
 					hbch <- p.ID
 				}
 
@@ -294,9 +306,9 @@ func send(id []int, msg int, peer Utils.Peer, reply *Utils.Message) error {
 	for i := 1; i <= tries; i++ {
 
 		// Random delay in ms
-		d := rand.Intn(delay * 1000)
-		fmt.Println("Peer \"", ID, "\" generated this delay in ms:", d)
-		time.Sleep(time.Duration(d) * time.Millisecond)
+		//d := rand.Intn(delay * 1000)
+		//fmt.Println("Peer \"", ID, "\" generated this delay in ms:", d)
+		//time.Sleep(time.Duration(d) * time.Millisecond)
 
 		// Connect to the receiver peer
 		cli, err := rpc.DialHTTP("tcp", peer.IP+":"+peer.Port)

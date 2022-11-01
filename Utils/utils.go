@@ -6,7 +6,6 @@ const (
 	OK
 	COORDINATOR
 	HEARTBEAT
-	CLOSE
 )
 
 // Message struct

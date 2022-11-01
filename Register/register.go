@@ -20,7 +20,7 @@ var peerList []Utils.Peer
 var currentPeer = 0
 var numPeer int
 var conf Utils.Conf
-var VERBOSE = false
+var verbose = false
 
 func main() {
 
@@ -47,7 +47,7 @@ func main() {
 
 	// Setting verbose flag
 	if os.Getenv("VERBOSE") == "1" {
-		VERBOSE = true
+		verbose = true
 	}
 
 	// Unmarshalling json file
