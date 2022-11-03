@@ -2,9 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"github.com/joho/godotenv"
-	"github.com/phayes/freeport"
 	"log"
 	"math/rand"
 	"net"
@@ -14,6 +11,9 @@ import (
 	"prog/Utils"
 	"strconv"
 	"time"
+
+	"github.com/joho/godotenv"
+	"github.com/phayes/freeport"
 )
 
 type api int // Used to publish RPC method
@@ -37,14 +37,14 @@ var election bool // Used only by Bully algorithm. If true, the peer is part of 
 var ring []int    // Used only by Ring algorithm. Contains the peers that are part of the election
 var alg bool      // If true then Bully algorithm, else Ring algorithm
 
-// TODO SISTEMARE i print e mettere verbose
+// TODO SISTEMARE i print (niente log su file)
 // TODO Vedere se è possibile stampare in ordine
-// TODO Vedere se aggiungere gob per marshaling
+// TODO Vedere se aggiungere gob per marshaling (credo di no perche su aws metti su una sola macchina)
 
 // Peer main
 func main() {
 
-	fmt.Println("Peer service startup")
+	Utils.Print(verbose, "Peer service startup")
 
 	// Set randomizer seed
 	rand.Seed(time.Now().UnixNano())
@@ -94,7 +94,7 @@ func main() {
 	hbch = make(chan int)
 
 	// Reading config file to retrieve IP address and port
-	fmt.Println("Reading config file")
+	Utils.Print(verbose, "Reading config file")
 	j, err := os.ReadFile("./config.json")
 	if err != nil {
 		log.Fatalln("Open error: ", err)
@@ -105,7 +105,7 @@ func main() {
 	if err != nil {
 		log.Fatalln("Unmarshal error: ", err)
 	}
-	fmt.Println("Conf: ", conf)
+	Utils.Print(verbose, "Conf: ", conf)
 
 	// Registering RPC API
 	err = rpc.RegisterName("Peer", new(api))
@@ -150,7 +150,7 @@ func main() {
 	// Setting peer ID and retrieve information about other peers
 	ID = reply.ID
 	peerList = reply.Peers
-	fmt.Println("Resp: {id : ", ID, "}, {lis : ", peerList, "}")
+	Utils.Print(verbose, "Resp: {id : ", ID, "}, {lis : ", peerList, "}")
 	err = cli.Close()
 	if err != nil {
 		log.Fatalln("Error close: ", err)
@@ -186,7 +186,7 @@ func main() {
 				if msg.ID[0] == ID {
 					// Send COORDINATOR message
 					coordinator = msg.ID[len(msg.ID)-1]
-					fmt.Println("Found coordinator", coordinator)
+					Utils.Print(verbose, "Found coordinator", coordinator)
 					a.sendCoordinator()
 				} else {
 					// Send election to the next peer
@@ -196,7 +196,7 @@ func main() {
 
 		// Peer msg2 down
 		case id := <-hbch:
-			fmt.Println("Peer \"", ID, "\" know that peer", id, "is down.")
+			Utils.Print(verbose, "Peer \"", ID, "\" know that peer", id, "is down.")
 
 			// If the peer down is the coordinator make a new election
 			if id == coordinator && !election {
@@ -217,7 +217,7 @@ func (t *api) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 
 	// ELECTION message
 	case Utils.ELECTION:
-		fmt.Println("Peer \"", ID, "\" received: ELECTION from:", args.ID)
+		Utils.Print(verbose, "Peer \"", ID, "\" received: ELECTION from:", args.ID)
 
 		// Check algorithm type
 		if alg {
@@ -230,14 +230,14 @@ func (t *api) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 
 	// COORDINATOR message
 	case Utils.COORDINATOR:
-		fmt.Println("Peer \"", ID, "\" recognized as coordinator", args.ID)
+		Utils.Print(verbose, "Peer \"", ID, "\" recognized as coordinator", args.ID)
 
 		// Set coordinator ID
 		coordinator = args.ID[0]
 
 	// HEARTBEAT message
 	case Utils.HEARTBEAT:
-		fmt.Println("Peer \"", ID, "\" received: HEARTBEAT from:", args.ID)
+		Utils.Print(verbose, "Peer \"", ID, "\" received: HEARTBEAT from:", args.ID)
 
 		// Set reply msg parameters
 		reply.ID = []int{ID}
@@ -246,7 +246,7 @@ func (t *api) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 
 	// Random delay in ms
 	d := rand.Intn(delay * 1000)
-	fmt.Println("Peer \"", ID, "\" generated this delay in ms:", d)
+	Utils.Print(verbose, "Peer \"", ID, "\" generated this delay in ms:", d)
 	time.Sleep(time.Duration(d) * time.Millisecond)
 
 	// No error to manage
@@ -273,20 +273,20 @@ func heartbeat() {
 		for _, p := range peerList {
 			beat := new(Utils.Message)
 			if p.ID != ID {
-				fmt.Println("Peer \"", ID, "\" sending heartbeat to: ", p.ID)
+				Utils.Print(verbose, "Peer \"", ID, "\" sending heartbeat to: ", p.ID)
 
 				// Send heartbeat to p, if p crashed send ERROR to heartbeat channel
 				err := send([]int{ID}, Utils.HEARTBEAT, p, beat)
 				if err != nil {
-					fmt.Println("Peer \"", ID, "\" BEAT NOT RECEIVED from: ", p.ID)
+					Utils.Print(verbose, "Peer \"", ID, "\" BEAT NOT RECEIVED from: ", p.ID)
 					peerList = append(peerList[:p.ID], peerList[p.ID+1:]...)
-					fmt.Println("SSSSSSSSSSSSSS: ", peerList)
+					Utils.Print(verbose, "SSSSSSSSSSSSSS: ", peerList)
 					hbch <- p.ID
 				}
 
 				// If the peer responds than it is alive
 				if beat.Msg == Utils.HEARTBEAT {
-					fmt.Println("Peer \"", ID, "\" says", beat.ID, "is alive")
+					Utils.Print(verbose, "Peer \"", ID, "\" says", beat.ID, "is alive")
 				}
 			}
 		}
@@ -307,7 +307,7 @@ func send(id []int, msg int, peer Utils.Peer, reply *Utils.Message) error {
 
 		// Random delay in ms
 		//d := rand.Intn(delay * 1000)
-		//fmt.Println("Peer \"", ID, "\" generated this delay in ms:", d)
+		//Utils.Print("Peer \"", ID, "\" generated this delay in ms:", d)
 		//time.Sleep(time.Duration(d) * time.Millisecond)
 
 		// Connect to the receiver peer

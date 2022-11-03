@@ -1,5 +1,7 @@
 package Utils
 
+import "fmt"
+
 // Message type
 const (
 	ELECTION = iota
@@ -37,4 +39,10 @@ type Conf struct {
 		IP   string `json:"ip"`
 		Port string `json:"port"`
 	} `json:"peer"`
+}
+
+func Print(verbose bool, a ...any) {
+	if verbose {
+		fmt.Println(a)
+	}
 }
