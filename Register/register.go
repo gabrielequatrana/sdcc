@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/joho/godotenv"
 	"log"
 	"net"
@@ -11,38 +10,33 @@ import (
 	"os"
 	"prog/Utils"
 	"strconv"
-	"time"
 )
 
-type RegisterApi int
+type RegisterApi int // Used to publish RPC method
 
-var peerList []Utils.Peer
-var currentPeer = 0
-var numPeer int
-var conf Utils.Conf
-var verbose = false
+var numPeer int           // Number of peers in the network
+var currentPeer = 0       // ID of the peer served
+var peerList []Utils.Peer // List of peers in the network
+var conf Utils.Conf       // Configuration of peer and register service
+var verbose = false       // Verbose flag
 
+var ch chan int // Go channel to wait all peers
+
+// Register service main
 func main() {
 
-	fmt.Println("Register service startup")
-
-	// Reading config file to retrieve IP address and port
-	fmt.Println("Reading config file")
-	j, err := os.ReadFile("./config.json")
-	if err != nil {
-		log.Fatalln("Open error: ", err)
-	}
+	log.Println("Register service startup, reading config and env files")
 
 	// Load .env file
-	err = godotenv.Load()
+	err := godotenv.Load()
 	if err != nil {
-		log.Fatalln("Load env error: ", err)
+		log.Fatalln("Load env file error: ", err)
 	}
 
 	// Setting number of peers
 	numPeer, err = strconv.Atoi(os.Getenv("PEERS"))
 	if err != nil {
-		log.Fatalln("Atoi error: ", err)
+		log.Fatalln("Atoi peers number error: ", err)
 	}
 
 	// Setting verbose flag
@@ -50,12 +44,20 @@ func main() {
 		verbose = true
 	}
 
+	// Make GO channel
+	ch = make(chan int)
+
+	// Reading config file to retrieve IP address and port
+	j, err := os.ReadFile("./config.json")
+	if err != nil {
+		log.Fatalln("Open config file error: ", err)
+	}
+
 	// Unmarshalling json file
 	err = json.Unmarshal(j, &conf)
 	if err != nil {
-		log.Fatalln("Unmarshal error: ", err)
+		log.Fatalln("Unmarshal config file error: ", err)
 	}
-	fmt.Println("Conf: ", conf)
 
 	// Registering the RPC API to export
 	err = rpc.RegisterName("Register", new(RegisterApi))
@@ -72,6 +74,16 @@ func main() {
 		log.Fatalln("Listen error: ", err)
 	}
 
+	// Goroutine that wait all peer before the register service sends the reply
+	go func() {
+		for currentPeer < numPeer {
+		}
+		Utils.Print(verbose, "Register service built this list:", peerList)
+		for i := 0; i <= numPeer; i++ {
+			ch <- 1
+		}
+	}()
+
 	// Serve incoming request
 	err = http.Serve(lis, nil)
 	if err != nil {
@@ -85,7 +97,7 @@ func (t *RegisterApi) RegisterPeer(args *Utils.Peer, reply *Utils.RegistrationRe
 	// Retrieve peer port
 	port, err := strconv.Atoi(args.Port)
 	if err != nil {
-		log.Fatalln("Atoi error: ", err)
+		log.Fatalln("Atoi peer port error: ", err)
 	}
 
 	// Create Peer struct to send
@@ -97,7 +109,6 @@ func (t *RegisterApi) RegisterPeer(args *Utils.Peer, reply *Utils.RegistrationRe
 
 	// Add registered peer to the list
 	peerList = append(peerList, peer)
-	fmt.Println(peerList)
 
 	// Fill the reply with peer ID and peer list
 	reply.ID = currentPeer
@@ -105,10 +116,8 @@ func (t *RegisterApi) RegisterPeer(args *Utils.Peer, reply *Utils.RegistrationRe
 	// Increment currentPeer
 	currentPeer++
 
-	// While number of peer registered less than initialized peer do nothing
-	for currentPeer < numPeer {
-		time.Sleep(time.Microsecond) // TODO si può fare senza sleep?
-	}
+	// Wait all peers before sends reply
+	<-ch
 
 	// Fill the reply with peer ID and peer list
 	reply.Peers = peerList

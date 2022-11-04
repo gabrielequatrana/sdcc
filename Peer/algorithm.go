@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"prog/Utils"
 )
 
@@ -23,7 +22,7 @@ func (b Bully) sendElection() {
 	// Send ELECTION to peers
 	for _, p := range peerList {
 		if p.ID > ID {
-			fmt.Println("Peer \"", ID, "\" sending ELECTION to: ", p.ID)
+			Utils.Print(verbose, "Peer", ID, "sending ELECTION to", p.ID)
 
 			// Send message to p
 			err := send([]int{ID}, Utils.ELECTION, p, &reply)
@@ -31,12 +30,11 @@ func (b Bully) sendElection() {
 				continue // Peer crashed
 			}
 
-			fmt.Println("Peer \"", ID, "\" received from", p.ID, ": ", reply.Msg)
-
 			// If the current peer receive an OK message, it exits the election
+			Utils.Print(verbose, "Peer", ID, "received OK message from", p.ID)
 			if reply.Msg == Utils.OK && election {
 				election = false
-				fmt.Println("Peer \"", ID, "\" exit the election")
+				Utils.Print(verbose, "Peer", ID, "exits the election")
 			}
 		}
 	}
@@ -62,8 +60,10 @@ func (r Ring) sendElection() {
 		peer := peerList[peerID]
 
 		// Send message to the peer
+		Utils.Print(verbose, "Peer", ID, "sending ELECTION to", peer.ID)
 		err := send(ring, Utils.ELECTION, peer, &reply)
 		if err != nil {
+			Utils.Print(verbose, "Peer", ID, "can't contact", peer.ID, "\nTry to contact next one on the ring")
 			continue // If cant contact the peer, try contacting the next one on the ring
 		}
 
@@ -77,12 +77,12 @@ func (b Bully) sendCoordinator() {
 
 	// Set coordinator as peer id
 	coordinator = ID
-	fmt.Println("Peer \"", ID, "\" recognized as coordinator himself")
+	Utils.Print(verbose, "Peer", ID, "recognized as COORDINATOR itself")
 
 	// Send COORDINATOR to peers
 	for _, p := range peerList {
 		if p.ID != ID {
-			fmt.Println("Peer \"", ID, "\" sending COORDINATOR to: ", p.ID)
+			Utils.Print(verbose, "Peer", ID, "sending COORDINATOR to", p.ID)
 
 			// Send message to p
 			err := send([]int{ID}, Utils.COORDINATOR, p, &reply)
@@ -97,13 +97,10 @@ func (b Bully) sendCoordinator() {
 func (r Ring) sendCoordinator() {
 	var reply Utils.Message // Reply message
 
-	// Set coordinator as peer id
-	fmt.Println("Peer \"", ID, "\" recognized as coordinator:", coordinator)
-
 	// Send COORDINATOR to peers
 	for _, p := range peerList {
 		if p.ID != ID {
-			fmt.Println("Peer \"", ID, "\" sending COORDINATOR to: ", p.ID)
+			Utils.Print(verbose, "Peer", ID, "sending COORDINATOR to", p.ID)
 
 			// Send message to p
 			err := send([]int{coordinator}, Utils.COORDINATOR, p, &reply)

@@ -1,6 +1,8 @@
 package Utils
 
-import "fmt"
+import (
+	"log"
+)
 
 // Message type
 const (
@@ -41,8 +43,9 @@ type Conf struct {
 	} `json:"peer"`
 }
 
+// Print check the verbose flag and print in the command line
 func Print(verbose bool, a ...any) {
 	if verbose {
-		fmt.Println(a)
+		log.Println(a...)
 	}
 }

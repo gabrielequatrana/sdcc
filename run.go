@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"strconv"
+	"strings"
 )
 
 func main() {
@@ -16,9 +17,9 @@ func main() {
 	// Handle SIGINT
 	// Clear execution environment
 	go func() {
-		sigchan := make(chan os.Signal)
-		signal.Notify(sigchan, os.Interrupt)
-		<-sigchan
+		sigCh := make(chan os.Signal)
+		signal.Notify(sigCh, os.Interrupt)
+		<-sigCh
 		fmt.Println("Program killed!")
 
 		// Exec command 'docker compose down'
@@ -53,18 +54,19 @@ func main() {
 	}()
 
 	// Set application flags
-	aflag := flag.String("a", "", "Election algorithm")
-	nflag := flag.Int("n", 0, "Number of peers")
-	dflag := flag.Int("d", 2, "Delay in seconds to send a message")
-	rflag := flag.Int("r", 3, "Number of tries to send a message")
-	hbflag := flag.Int("hb", 2, "Heartbeat repeat time")
-	vflag := flag.Bool("v", false, "Verbose")
+	aFlag := flag.String("a", "", "Election algorithm (select \"bully\" or \"ring\")")
+	nFlag := flag.Int("n", 0, "Number of peers (at least 2)")
+	dFlag := flag.Int("d", 2, "Delay in seconds to send a message")
+	rFlag := flag.Int("r", 3, "Number of tries to send a message")
+	hbFlag := flag.Int("hb", 2, "Heartbeat repeat time in seconds")
+	vFlag := flag.Bool("v", false, "Print debug information")
 
 	// Retrieve flags value
 	flag.Parse()
 
 	// Check correctness of flags
-	if *nflag <= 0 || (*aflag != "bully" && *aflag != "ring") {
+	*aFlag = strings.ToLower(*aFlag)
+	if *nFlag <= 1 || (*aFlag != "bully" && *aFlag != "ring") {
 		flag.Usage()
 		os.Exit(0)
 	}
@@ -81,27 +83,28 @@ func main() {
 		log.Fatalln("Load env error: ", err)
 	}
 
+	// map used to add flags to .env file
 	mp := make(map[string]string)
 
 	// Set number of peers in .env file
-	mp["PEERS"] = strconv.Itoa(*nflag)
+	mp["PEERS"] = strconv.Itoa(*nFlag)
 
 	// Set VERBOSE in .env file
-	if *vflag {
+	if *vFlag {
 		mp["VERBOSE"] = "1"
 	}
 
-	// Set hbtime in .env file
-	mp["HEARTBEAT"] = strconv.Itoa(*hbflag)
+	// Set hbTime in .env file
+	mp["HEARTBEAT"] = strconv.Itoa(*hbFlag)
 
 	// Set algorithm type in .env file
-	mp["ALGO"] = *aflag
+	mp["ALGO"] = *aFlag
 
 	// Set delay in .env file
-	mp["DELAY"] = strconv.Itoa(*dflag)
+	mp["DELAY"] = strconv.Itoa(*dFlag)
 
 	// Set tries in .env file
-	mp["TRIES"] = strconv.Itoa(*rflag)
+	mp["TRIES"] = strconv.Itoa(*rFlag)
 
 	// Write .env file
 	err = godotenv.Write(mp, ".env")
