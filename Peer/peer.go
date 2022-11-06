@@ -11,6 +11,7 @@ import (
 	"prog/Utils"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -38,8 +39,10 @@ var election bool // Used only by Bully algorithm. If true, the peer is part of 
 var ring []int    // Used only by Ring algorithm. Contains the peers that are part of the election
 var alg bool      // If true then Bully algorithm, else Ring algorithm
 
-// TODO SISTEMARE i print (Aggiungere sempre ID del peer, aggiungere sempre tipo msg inviato e id del peer che riceve)
-// TODO Vedere se è possibile stampare in ordine (Si possno avere shell per ogni peer?)
+var crash bool
+
+// TODO Risolvere early crash in Ring test 2 e 3 (Problema con newElection)
+// TODO Si possno avere shell per ogni peer?
 
 // Peer main
 func main() {
@@ -154,6 +157,17 @@ func main() {
 		log.Fatalln("Error close connection with register service:", err)
 	}
 
+	// Set crash flag
+	pp := os.Getenv("CRASH")
+	res := strings.Split(pp, ";")
+	for _, i := range res {
+		gg, _ := strconv.Atoi(i)
+		if gg == ID {
+			crash = true
+			Utils.Print(verbose, "Peer", ID, "will crash later")
+		}
+	}
+
 	// Goroutine for serve RPC request coming from other peers
 	go func() {
 		err = http.Serve(lis, nil)
@@ -162,13 +176,13 @@ func main() {
 		}
 	}()
 
-	// Goroutine for HeartBeat monitoring
-	go heartbeat()
-
 	// Initially only the Peer with higher id sends the ELECTION message
 	if ID == peerList[len(peerList)-1].ID {
 		newElection(a)
 	}
+
+	// Goroutine for HeartBeat monitoring
+	go heartbeat()
 
 	// Infinite loop executed by peer.
 	// Wait for message received in channel and call functions.
@@ -250,6 +264,10 @@ func (t *PeerApi) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 		// Set coordinator ID
 		coordinator = args.ID[0]
 
+		if crash {
+			os.Exit(0)
+		}
+
 	// HEARTBEAT message
 	case Utils.HEARTBEAT:
 		Utils.Print(verbose, "Peer", ID, "received HEARTBEAT from", args.ID[0])
@@ -277,6 +295,9 @@ func newElection(alg Algorithm) {
 	if election {
 		alg.sendCoordinator()
 	}
+	if crash {
+		os.Exit(0)
+	}
 }
 
 // Check peers status by sending heartbeat message
@@ -297,15 +318,14 @@ func heartbeat() {
 				err := send([]int{ID}, Utils.HEARTBEAT, p, beat)
 				if err != nil {
 					// If the p is not responding, delete it from the list
-					Utils.Print(verbose, "Peer", ID, "not received HEARTBEAT from", p.ID)
-					peerList = append(peerList[:p.ID], peerList[p.ID+1:]...)
-					Utils.Print(verbose, "SSSSSSSSSSSSSS: ", peerList)
+					Utils.Print(verbose, "Peer", ID, "not received BEAT response from", p.ID)
+					peerList = removeElement(peerList, p)
 					hbCh <- p.ID
 				}
 
 				// If the peer responds than it is alive
 				if beat.Msg == Utils.HEARTBEAT {
-					Utils.Print(verbose, "Peer", ID, "says", beat.ID, "is alive")
+					Utils.Print(verbose, "Peer", ID, "says", beat.ID[0], "is alive")
 				}
 			}
 		}
@@ -352,4 +372,14 @@ func send(id []int, msg int, peer Utils.Peer, reply *Utils.Message) error {
 
 	// Return nil if there's no error
 	return nil
+}
+
+// Remove a peer from a slice of peers
+func removeElement(slice []Utils.Peer, peer Utils.Peer) []Utils.Peer {
+	for i := 0; i <= len(slice)-1; i++ {
+		if slice[i] == peer {
+			slice = append(slice[:i], slice[i+1:]...)
+		}
+	}
+	return slice
 }

@@ -5,12 +5,16 @@ import (
 	"fmt"
 	"github.com/joho/godotenv"
 	"log"
+	"math/rand"
 	"os"
 	"os/exec"
 	"os/signal"
 	"strconv"
 	"strings"
+	"time"
 )
+
+var crash []int
 
 func main() {
 
@@ -60,15 +64,58 @@ func main() {
 	rFlag := flag.Int("r", 3, "Number of tries to send a message")
 	hbFlag := flag.Int("hb", 2, "Heartbeat repeat time in seconds")
 	vFlag := flag.Bool("v", false, "Print debug information")
+	tFlag := flag.Int("t", 0, "Execute a test")
 
 	// Retrieve flags value
 	flag.Parse()
 
+	// map used to add flags to .env file
+	mp := make(map[string]string)
+
 	// Check correctness of flags
 	*aFlag = strings.ToLower(*aFlag)
-	if *nFlag <= 1 || (*aFlag != "bully" && *aFlag != "ring") {
+	if *nFlag <= 1 || (*aFlag != "bully" && *aFlag != "ring") || *tFlag >= 4 {
 		flag.Usage()
 		os.Exit(0)
+	}
+
+	// Check if executing test
+	if *tFlag != 0 {
+
+		// At least 4 peers to run tests
+		if *nFlag <= 3 {
+			flag.Usage()
+			os.Exit(0)
+		}
+
+		// Set randomizer seed
+		rand.Seed(time.Now().UnixNano())
+
+		switch *tFlag {
+
+		// Crash one non coordinator peer
+		case 1:
+			crash = append(crash, rand.Intn(*nFlag-1))
+			fmt.Println("Running Test 1 with", *nFlag, "peers. The peer that will crash is", crash[0])
+			mp["CRASH"] = strconv.Itoa(crash[0])
+
+		// Crash the coordinator peer
+		case 2:
+			crash = append(crash, *nFlag-1)
+			fmt.Println("Running Test 2 with", *nFlag, "peers. The peer that will crash is "+
+				"the coordinator [", crash[0], "]")
+			mp["CRASH"] = strconv.Itoa(crash[0])
+
+		// Crash one non coordinator peer and the coordinator peer
+		case 3:
+			crash = append(crash, rand.Intn(*nFlag-1))
+			crash = append(crash, *nFlag-1)
+			fmt.Println("Running Test 3 with", *nFlag, "peers. The peers that will crash is", crash[0], "and "+
+				"the coordinator [", crash[1], "]")
+			mp["CRASH"] = strconv.Itoa(crash[0]) + ";" + strconv.Itoa(crash[1])
+		}
+	} else {
+		mp["CRASH"] = "-1"
 	}
 
 	// Create and open .env file
@@ -82,9 +129,6 @@ func main() {
 	if err != nil {
 		log.Fatalln("Load env error: ", err)
 	}
-
-	// map used to add flags to .env file
-	mp := make(map[string]string)
 
 	// Set number of peers in .env file
 	mp["PEERS"] = strconv.Itoa(*nFlag)

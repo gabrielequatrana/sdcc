@@ -27,7 +27,9 @@ func (b Bully) sendElection() {
 			// Send message to p
 			err := send([]int{ID}, Utils.ELECTION, p, &reply)
 			if err != nil {
-				continue // Peer crashed
+				// Peer crashed
+				peerList = removeElement(peerList, p)
+				continue
 			}
 
 			// If the current peer receive an OK message, it exits the election
@@ -63,8 +65,10 @@ func (r Ring) sendElection() {
 		Utils.Print(verbose, "Peer", ID, "sending ELECTION to", peer.ID)
 		err := send(ring, Utils.ELECTION, peer, &reply)
 		if err != nil {
+			// Peer crashed, try contacting the next one on the ring
 			Utils.Print(verbose, "Peer", ID, "can't contact", peer.ID, "\nTry to contact next one on the ring")
-			continue // If cant contact the peer, try contacting the next one on the ring
+			peerList = removeElement(peerList, peer)
+			continue
 		}
 
 		break
@@ -87,7 +91,9 @@ func (b Bully) sendCoordinator() {
 			// Send message to p
 			err := send([]int{ID}, Utils.COORDINATOR, p, &reply)
 			if err != nil {
-				continue // Peer crashed
+				// Peer crashed
+				peerList = removeElement(peerList, p)
+				continue
 			}
 		}
 	}
@@ -105,7 +111,9 @@ func (r Ring) sendCoordinator() {
 			// Send message to p
 			err := send([]int{coordinator}, Utils.COORDINATOR, p, &reply)
 			if err != nil {
-				continue // Peer crashed
+				// Peer crashed
+				peerList = removeElement(peerList, p)
+				continue
 			}
 		}
 	}
