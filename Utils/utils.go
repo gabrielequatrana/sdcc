@@ -4,6 +4,12 @@ import (
 	"log"
 )
 
+// Algorithm type
+const (
+	BULLY = true
+	RING  = false
+)
+
 // Message type
 const (
 	ELECTION = iota

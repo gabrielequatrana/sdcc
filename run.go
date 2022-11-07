@@ -9,14 +9,31 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 )
 
-var crash []int
+var crash []int  // Peer that will crash in test mode
+var shell string // Shell used to run the program
+var arg string   // Shell argument
 
 func main() {
+
+	// Check if the OS is Windows or Linux
+	OS := runtime.GOOS
+	switch OS {
+	case "windows":
+		fmt.Println("Running on Windows")
+		shell = "cmd.exe"
+		arg = "/c"
+
+	case "linux":
+		fmt.Println("Running on Linux")
+		shell = "/bin/sh"
+		arg = "-c"
+	}
 
 	// Handle SIGINT
 	// Clear execution environment
@@ -27,21 +44,21 @@ func main() {
 		fmt.Println("Program killed!")
 
 		// Exec command 'docker compose down'
-		cmd := exec.Command("cmd.exe", "/c", "start", "docker", "compose", "down")
+		cmd := exec.Command(shell, arg, "start", "docker", "compose", "down")
 		_, err := cmd.Output()
 		if err != nil {
 			log.Fatalln("Command exec error: ", err)
 		}
 
 		// Exec command 'docker rmi all'
-		out, err := exec.Command("cmd.exe", "/c", "docker", "images", "-a", "-q").Output()
+		out, err := exec.Command(shell, arg, "docker", "images", "-a", "-q").Output()
 		if err != nil {
 			log.Fatalln("Command exec error: ", err)
 		}
 
 		// Delete all images
 		for i := 0; i < len(out); i += 13 {
-			cmd = exec.Command("cmd.exe", "/c", "docker", "rmi", string(out[i:i+12]))
+			cmd = exec.Command(shell, arg, "docker", "rmi", string(out[i:i+12]))
 			err = cmd.Start()
 			if err != nil {
 				log.Fatalln("Command exec error: ", err)
@@ -60,8 +77,7 @@ func main() {
 	// Set application flags
 	aFlag := flag.String("a", "", "Election algorithm (select \"bully\" or \"ring\")")
 	nFlag := flag.Int("n", 0, "Number of peers (at least 2)")
-	dFlag := flag.Int("d", 2, "Delay in seconds to send a message")
-	rFlag := flag.Int("r", 3, "Number of tries to send a message")
+	dFlag := flag.Int("d", 1000, "Delay in ms to send a message")
 	hbFlag := flag.Int("hb", 2, "Heartbeat repeat time in seconds")
 	vFlag := flag.Bool("v", false, "Print debug information")
 	tFlag := flag.Int("t", 0, "Execute a test")
@@ -96,22 +112,21 @@ func main() {
 		// Crash one non coordinator peer
 		case 1:
 			crash = append(crash, rand.Intn(*nFlag-1))
-			fmt.Println("Running Test 1 with", *nFlag, "peers. The peer that will crash is", crash[0])
+			fmt.Println("Running Test 1 with", *nFlag, "peers. The peer", crash[0], "will crash")
 			mp["CRASH"] = strconv.Itoa(crash[0])
 
 		// Crash the coordinator peer
 		case 2:
 			crash = append(crash, *nFlag-1)
-			fmt.Println("Running Test 2 with", *nFlag, "peers. The peer that will crash is "+
-				"the coordinator [", crash[0], "]")
+			fmt.Println("Running Test 2 with", *nFlag, "peers. The coordinator peer will crash")
 			mp["CRASH"] = strconv.Itoa(crash[0])
 
 		// Crash one non coordinator peer and the coordinator peer
 		case 3:
 			crash = append(crash, rand.Intn(*nFlag-1))
 			crash = append(crash, *nFlag-1)
-			fmt.Println("Running Test 3 with", *nFlag, "peers. The peers that will crash is", crash[0], "and "+
-				"the coordinator [", crash[1], "]")
+			fmt.Println("Running Test 3 with", *nFlag, "peers. The peer", crash[0], ""+
+				"and the coordinator will crash")
 			mp["CRASH"] = strconv.Itoa(crash[0]) + ";" + strconv.Itoa(crash[1])
 		}
 	} else {
@@ -147,9 +162,6 @@ func main() {
 	// Set delay in .env file
 	mp["DELAY"] = strconv.Itoa(*dFlag)
 
-	// Set tries in .env file
-	mp["TRIES"] = strconv.Itoa(*rFlag)
-
 	// Write .env file
 	err = godotenv.Write(mp, ".env")
 	if err != nil {
@@ -163,14 +175,14 @@ func main() {
 	}
 
 	// Exec command 'docker compose build'
-	cmd := exec.Command("cmd.exe", "/c", "docker", "compose", "build")
+	cmd := exec.Command(shell, arg, "docker", "compose", "build")
 	err = cmd.Start()
 	if err != nil {
 		log.Fatalln("Command exec error: ", err)
 	}
 
 	// Exec command 'docker compose up'
-	cmd = exec.Command("cmd.exe", "/c", "start", "docker", "compose", "up")
+	cmd = exec.Command(shell, arg, "start", "docker", "compose", "up")
 	err = cmd.Start()
 	if err != nil {
 		log.Fatalln("Command exec error: ", err)

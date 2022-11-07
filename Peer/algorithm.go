@@ -20,7 +20,8 @@ func (b Bully) sendElection() {
 	election = true         // The current peer take part in the election
 
 	// Send ELECTION to peers
-	for _, p := range peerList {
+	for i := 0; i <= len(peerList)-1; i++ {
+		p := peerList[i]
 		if p.ID > ID {
 			Utils.Print(verbose, "Peer", ID, "sending ELECTION to", p.ID)
 
@@ -28,7 +29,9 @@ func (b Bully) sendElection() {
 			err := send([]int{ID}, Utils.ELECTION, p, &reply)
 			if err != nil {
 				// Peer crashed
+				Utils.Print(verbose, "Peer", ID, "can't contact", p.ID)
 				peerList = removeElement(peerList, p)
+				i--
 				continue
 			}
 
@@ -66,8 +69,9 @@ func (r Ring) sendElection() {
 		err := send(ring, Utils.ELECTION, peer, &reply)
 		if err != nil {
 			// Peer crashed, try contacting the next one on the ring
-			Utils.Print(verbose, "Peer", ID, "can't contact", peer.ID, "\nTry to contact next one on the ring")
+			Utils.Print(verbose, "Peer", ID, "can't contact", peer.ID, "try to contact next one on the ring")
 			peerList = removeElement(peerList, peer)
+			i-- // Removed an element from the list
 			continue
 		}
 
@@ -84,7 +88,8 @@ func (b Bully) sendCoordinator() {
 	Utils.Print(verbose, "Peer", ID, "recognized as COORDINATOR itself")
 
 	// Send COORDINATOR to peers
-	for _, p := range peerList {
+	for i := 0; i <= len(peerList)-1; i++ {
+		p := peerList[i]
 		if p.ID != ID {
 			Utils.Print(verbose, "Peer", ID, "sending COORDINATOR to", p.ID)
 
@@ -92,7 +97,9 @@ func (b Bully) sendCoordinator() {
 			err := send([]int{ID}, Utils.COORDINATOR, p, &reply)
 			if err != nil {
 				// Peer crashed
+				Utils.Print(verbose, "Peer", ID, "can't contact", p.ID)
 				peerList = removeElement(peerList, p)
+				i--
 				continue
 			}
 		}
@@ -104,7 +111,8 @@ func (r Ring) sendCoordinator() {
 	var reply Utils.Message // Reply message
 
 	// Send COORDINATOR to peers
-	for _, p := range peerList {
+	for i := 0; i <= len(peerList)-1; i++ {
+		p := peerList[i]
 		if p.ID != ID {
 			Utils.Print(verbose, "Peer", ID, "sending COORDINATOR to", p.ID)
 
@@ -112,7 +120,9 @@ func (r Ring) sendCoordinator() {
 			err := send([]int{coordinator}, Utils.COORDINATOR, p, &reply)
 			if err != nil {
 				// Peer crashed
+				Utils.Print(verbose, "Peer", ID, "can't contact", p.ID)
 				peerList = removeElement(peerList, p)
+				i--
 				continue
 			}
 		}
