@@ -28,7 +28,6 @@ var ip, port string       // IP address and port of the peer
 var verbose = false       // Verbose flag
 
 var coordinator int // ID of the coordinator peer
-var algoName string // Name of current election algorithm
 var delay int       // Maximum delay to send a message in ms
 var hbTime int      // Repetition interval of heartbeat service
 var hbPeer int      // ID of the peer that can run the heartbeat service
@@ -41,7 +40,6 @@ var ring []int    // Used only by Ring algorithm. Contains the peers that are pa
 var alg bool      // If true then Bully algorithm, else Ring algorithm
 var crash bool    // Used in test execution. If true the peer will crash
 
-// TODO Rivedere commenti e print
 // TODO RIMUOVERE CHE ELIMINA LE IMMAGINI E I CONTAINER (SENNO CANCELLO TUTTO ALLA PROF)
 // TODO Aggiungere supporto a linux con /bin/sh
 // TODO Si possono avere shell per ogni peer?
@@ -49,7 +47,7 @@ var crash bool    // Used in test execution. If true the peer will crash
 // Peer main
 func main() {
 
-	log.Println("Peer service startup, reading config and env files")
+	log.Println("Peer service startup, reading config and .env files")
 
 	// Set randomizer seed
 	rand.Seed(time.Now().UnixNano())
@@ -68,13 +66,12 @@ func main() {
 	// Setting delay
 	delay, err = strconv.Atoi(os.Getenv("DELAY"))
 	if err != nil {
-		log.Fatalln("Atoi delay error:", err)
+		log.Fatalln("AtoI delay error:", err)
 	}
 
 	// Setting algorithm type
 	var a Algorithm
-	algoName = os.Getenv("ALGO")
-	switch algoName {
+	switch os.Getenv("ALGO") {
 	case "bully":
 		alg = Utils.BULLY
 		a = Bully{}
@@ -86,7 +83,7 @@ func main() {
 	// Setting heartbeat time
 	hbTime, err = strconv.Atoi(os.Getenv("HEARTBEAT"))
 	if err != nil {
-		log.Fatalln("Atoi heartbeat time error:", err)
+		log.Fatalln("AtoI heartbeat time error:", err)
 	}
 
 	// Make GO channels
@@ -102,7 +99,7 @@ func main() {
 	// Unmarshalling json file
 	err = json.Unmarshal(j, &conf)
 	if err != nil {
-		log.Fatalln("Unmarshal config file error:", err)
+		log.Fatalln("Unmarshal configuration file error:", err)
 	}
 
 	// Registering RPC API
@@ -156,11 +153,17 @@ func main() {
 	}
 
 	// Set crash flag
-	pp := os.Getenv("CRASH")
-	res := strings.Split(pp, ";")
-	for _, i := range res {
-		gg, _ := strconv.Atoi(i)
-		if gg == ID {
+	peersCrash := strings.Split(os.Getenv("CRASH"), ";")
+	for _, pp := range peersCrash {
+
+		// Get peer ID
+		pID, err := strconv.Atoi(pp)
+		if err != nil {
+			log.Fatalln("AtoI crash peer error:", err)
+		}
+
+		// Check if the peer will crash
+		if pID == ID {
 			crash = true
 			Utils.Print(verbose, "Peer", ID, "will crash later")
 		}
@@ -174,13 +177,13 @@ func main() {
 		}
 	}()
 
-	// Initially the peer with higher id starts the election
+	// Initially the peer with higher id starts the election to reduce messages number
 	if ID == peerList[len(peerList)-1].ID {
 		newElection(a)
 	}
 
 	// Goroutine for HeartBeat monitoring
-	// The peer 0 start with heartbeat service
+	// The peer 0 will start with heartbeat service
 	hbPeer = 0
 	go heartbeat()
 
@@ -194,8 +197,9 @@ func main() {
 
 			// Check algorithm type
 			if alg == Utils.BULLY {
-				// If the peer receive an ELECTION message it has to create a new election because it got a higher ID
+				// If the peer receive an ELECTION message it has to create a new election because it has higher ID
 				newElection(a)
+
 			} else if alg == Utils.RING {
 				// Check if the peer is already in the election
 				if searchElement(msg.ID, ID) {
@@ -208,18 +212,19 @@ func main() {
 							"found the coordinator:", coordinator)
 						a.sendCoordinator()
 
-						ring = nil
-
 						// Check crash flag
 						if crash {
 							os.Exit(0)
 						}
-					} else {
-						ring = nil
 
+					} else {
 						// The peer that started the election crashed, then start a new election
 						newElection(a)
 					}
+
+					// Reset ring
+					ring = nil
+
 				} else {
 					// Send election to the next peer
 					a.sendElection()
@@ -228,6 +233,8 @@ func main() {
 
 		// Peer received an HEARTBEAT message
 		case id := <-hbCh:
+
+			// Peer with id is down
 			Utils.Print(verbose, "Peer", ID, "know that peer", id, "is down")
 
 			// If the peer down is the coordinator make a new election
@@ -244,11 +251,8 @@ func (t *PeerApi) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 	// Flag used to check if the peer needs to send a reply
 	replyFlag := false
 
-	// Message sent by a peer
-	msg := args.Msg
-
 	// Check type of message received
-	switch msg {
+	switch args.Msg {
 
 	// ELECTION message
 	case Utils.ELECTION:
@@ -270,7 +274,7 @@ func (t *PeerApi) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 
 	// COORDINATOR message
 	case Utils.COORDINATOR:
-		Utils.Print(verbose, "Peer", ID, "recognized as coordinator", args.ID[0])
+		Utils.Print(verbose, "Peer", ID, "recognized", args.ID[0], "as coordinator")
 
 		// Reset ring if using ring algorithm
 		if alg == Utils.RING {
@@ -280,7 +284,7 @@ func (t *PeerApi) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 		// Set coordinator ID
 		coordinator = args.ID[0]
 
-		// Check crash flag
+		// Check crash flag non coordinator peer
 		if crash {
 			os.Exit(0)
 		}
@@ -312,7 +316,7 @@ func newElection(algorithm Algorithm) {
 	if (alg == Utils.BULLY) && election {
 		algorithm.sendCoordinator()
 
-		// Check crash flag
+		// Check crash flag bully coordinator
 		if crash {
 			os.Exit(0)
 		}
@@ -324,7 +328,7 @@ func heartbeat() {
 
 	// Execute an infinite loop
 	for {
-		// Repeat every hbTime seconds
+		// Repeat every hbTime*numPeer seconds
 		time.Sleep(time.Second * time.Duration(hbTime))
 
 		// Check if the peer has to run heartbeat service
@@ -371,9 +375,9 @@ func send(id []int, msg int, peer Utils.Peer, reply *Utils.Message) error {
 	}
 
 	// Random delay in ms
-	//d := rand.Intn(delay)
-	//Utils.Print(verbose, "Peer", ID, "generated this delay in ms:", d)
-	//time.Sleep(time.Duration(d) * time.Millisecond)
+	d := rand.Intn(delay)
+	Utils.Print(verbose, "Peer", ID, "generated this delay in ms:", d)
+	time.Sleep(time.Duration(d) * time.Millisecond)
 
 	// Connect to the receiver peer
 	cli, err := rpc.DialHTTP("tcp", peer.IP+":"+peer.Port)
@@ -401,7 +405,7 @@ func removeElement(slice []Utils.Peer, peer Utils.Peer) []Utils.Peer {
 	return slice
 }
 
-// Search a peer from a slice of peers
+// Search a int from a slice of int
 func searchElement(slice []int, id int) bool {
 	for i := 0; i <= len(slice)-1; i++ {
 		if slice[i] == id {

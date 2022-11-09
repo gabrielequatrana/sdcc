@@ -4,7 +4,7 @@ import (
 	"prog/Utils"
 )
 
-// Algorithm interface that define the two method of the 2 algorithm of distributed election
+// Algorithm interface that define the methods of the two algorithms of distributed election
 type Algorithm interface {
 	sendElection()
 	sendCoordinator()
@@ -23,9 +23,9 @@ func (b Bully) sendElection() {
 	for i := 0; i <= len(peerList)-1; i++ {
 		p := peerList[i]
 		if p.ID > ID {
-			Utils.Print(verbose, "Peer", ID, "sending ELECTION to", p.ID)
 
 			// Send message to p
+			Utils.Print(verbose, "Peer", ID, "sending ELECTION to", p.ID)
 			err := send([]int{ID}, Utils.ELECTION, p, &reply)
 			if err != nil {
 				// Peer crashed

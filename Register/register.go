@@ -36,7 +36,7 @@ func main() {
 	// Setting number of peers
 	numPeer, err = strconv.Atoi(os.Getenv("PEERS"))
 	if err != nil {
-		log.Fatalln("Atoi peers number error: ", err)
+		log.Fatalln("AtoI peers number error: ", err)
 	}
 
 	// Setting verbose flag
@@ -77,10 +77,11 @@ func main() {
 	// Goroutine that wait all peer before the register service sends the reply
 	go func() {
 		for currentPeer < numPeer {
+			// Wait
 		}
 		Utils.Print(verbose, "Register service built this list:", peerList)
 		for i := 0; i <= numPeer; i++ {
-			ch <- 1
+			ch <- 1 // Send message to ch to resume the execution of RegisterPeer
 		}
 	}()
 
@@ -97,7 +98,7 @@ func (t *RegisterApi) RegisterPeer(args *Utils.Peer, reply *Utils.RegistrationRe
 	// Retrieve peer port
 	port, err := strconv.Atoi(args.Port)
 	if err != nil {
-		log.Fatalln("Atoi peer port error: ", err)
+		log.Fatalln("AtoI peer port error: ", err)
 	}
 
 	// Create Peer struct to send

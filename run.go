@@ -36,7 +36,7 @@ func main() {
 	}
 
 	// Handle SIGINT
-	// Clear execution environment
+	// TODO Rimuovere: Clear execution environment
 	go func() {
 		sigCh := make(chan os.Signal)
 		signal.Notify(sigCh, os.Interrupt)
@@ -44,26 +44,25 @@ func main() {
 		fmt.Println("Program killed!")
 
 		// Exec command 'docker compose down'
-		cmd := exec.Command(shell, arg, "start", "docker", "compose", "down")
-		_, err := cmd.Output()
+		_, err := exec.Command(shell, arg, "start", "docker", "compose", "down").Output()
 		if err != nil {
 			log.Fatalln("Command exec error: ", err)
 		}
 
 		// Exec command 'docker rmi all'
-		out, err := exec.Command(shell, arg, "docker", "images", "-a", "-q").Output()
-		if err != nil {
-			log.Fatalln("Command exec error: ", err)
-		}
+		//out, err := exec.Command(shell, arg, "docker", "images", "-a", "-q").Output()
+		//if err != nil {
+		//	log.Fatalln("Command exec error: ", err)
+		//}
 
 		// Delete all images
-		for i := 0; i < len(out); i += 13 {
-			cmd = exec.Command(shell, arg, "docker", "rmi", string(out[i:i+12]))
-			err = cmd.Start()
-			if err != nil {
-				log.Fatalln("Command exec error: ", err)
-			}
-		}
+		//for i := 0; i < len(out); i += 13 {
+		//	cmd = exec.Command(shell, arg, "docker", "rmi", string(out[i:i+12]))
+		//	err = cmd.Start()
+		//	if err != nil {
+		//		log.Fatalln("Command exec error: ", err)
+		//	}
+		//}
 
 		// Delete .env file
 		err = os.Remove(".env")
@@ -107,6 +106,7 @@ func main() {
 		// Set randomizer seed
 		rand.Seed(time.Now().UnixNano())
 
+		// Check test type
 		switch *tFlag {
 
 		// Crash one non coordinator peer
@@ -129,7 +129,9 @@ func main() {
 				"and the coordinator will crash")
 			mp["CRASH"] = strconv.Itoa(crash[0]) + ";" + strconv.Itoa(crash[1])
 		}
+
 	} else {
+		// Non test mode
 		mp["CRASH"] = "-1"
 	}
 
