@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"github.com/joho/godotenv"
@@ -21,6 +22,8 @@ var arg string   // Shell argument
 
 func main() {
 
+	std := bufio.NewWriter(os.Stdout)
+
 	// Check if the OS is Windows or Linux
 	OS := runtime.GOOS
 	switch OS {
@@ -36,20 +39,25 @@ func main() {
 	}
 
 	// Handle SIGINT
-	// TODO Rimuovere: Clear execution environment
 	go func() {
 		sigCh := make(chan os.Signal)
 		signal.Notify(sigCh, os.Interrupt)
 		<-sigCh
 		fmt.Println("Program killed!")
 
+		// Flush stdout
+		err := std.Flush()
+		if err != nil {
+			log.Fatalln("Flush error 3:", err)
+		}
+
 		// Exec command 'docker compose down'
 		cmd := exec.Command(shell, arg, "docker compose down")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		err := cmd.Run()
+		err = cmd.Run()
 		if err != nil {
-			log.Fatalln("Command exec error 3: ", err)
+			log.Fatalln("Command exec error 3:", err)
 		}
 
 		// Exec command 'docker rmi all'
@@ -69,7 +77,7 @@ func main() {
 		// Delete .env file
 		err = os.Remove(".env")
 		if err != nil {
-			log.Fatalln("Remove error: ", err)
+			log.Fatalln("Remove error:", err)
 		}
 
 		os.Exit(0)
@@ -140,13 +148,13 @@ func main() {
 	// Create and open .env file
 	file, err := os.Create(".env")
 	if err != nil {
-		log.Fatalln("Crate error: ", err)
+		log.Fatalln("Crate error:", err)
 	}
 
 	// Load .env file
 	err = godotenv.Load()
 	if err != nil {
-		log.Fatalln("Load env error: ", err)
+		log.Fatalln("Load env error:", err)
 	}
 
 	// Set number of peers in .env file
@@ -169,30 +177,44 @@ func main() {
 	// Write .env file
 	err = godotenv.Write(mp, ".env")
 	if err != nil {
-		log.Fatalln("Write env error: ", err)
+		log.Fatalln("Write env error:", err)
 	}
 
 	// Close .env file
 	err = file.Close()
 	if err != nil {
-		log.Fatalln("Close env error: ", err)
+		log.Fatalln("Close env error:", err)
 	}
 
 	// Exec command 'docker compose build'
 	cmd := exec.Command(shell, arg, "docker compose build")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.Stdin = nil
 	err = cmd.Run()
 	if err != nil {
-		log.Fatalln("Command exec error 1: ", err)
+		log.Fatalln("Command exec error 1:", err)
+	}
+
+	// Flush stdout
+	err = std.Flush()
+	if err != nil {
+		log.Fatalln("Flush error 1:", err)
 	}
 
 	// Exec command 'docker compose up'
 	cmd = exec.Command(shell, arg, "docker compose up")
 	cmd.Stdout = os.Stdout
+	cmd.Stdin = nil
 	err = cmd.Run()
-	if err != nil && err.Error() != "signal: interrupt" {
-		log.Fatalln("Command exec error 2: ", err)
+	if err != nil && err.Error() != "exit status 130" {
+		log.Fatalln("Command exec error 2:", err)
+	}
+
+	// Flush stdout
+	err = std.Flush()
+	if err != nil {
+		log.Fatalln("Flush error 2:", err)
 	}
 
 	select {}

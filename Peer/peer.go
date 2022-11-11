@@ -40,8 +40,6 @@ var ring []int    // Used only by Ring algorithm. Contains the peers that are pa
 var alg bool      // If true then Bully algorithm, else Ring algorithm
 var crash bool    // Used in test execution. If true the peer will crash
 
-// TODO RIMUOVERE CHE ELIMINA LE IMMAGINI E I CONTAINER (SENNO CANCELLO TUTTO ALLA PROF)
-// TODO Aggiungere supporto a linux con /bin/sh (provare senza vm)
 // TODO Si possono avere shell per ogni peer?
 
 // Peer main
@@ -157,9 +155,9 @@ func main() {
 	for _, pp := range peersCrash {
 
 		// Get peer ID
-		pID, err := strconv.Atoi(pp)
-		if err != nil {
-			log.Fatalln("AtoI crash peer error:", err)
+		pID, e := strconv.Atoi(pp)
+		if e != nil {
+			log.Fatalln("AtoI crash peer error:", e)
 		}
 
 		// Check if the peer will crash
