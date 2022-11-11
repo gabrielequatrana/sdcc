@@ -33,9 +33,9 @@ Implementation of distributed election algorithms \in Go.
 optional arguments:
     -a {ring,bully}   election algoritm   
     -n                number of peers \in the network
-    -hb               heartbeat service repeat time
+    -hb               heartbeat service repeat \time
     -d                maximum random delay to forwarding messages
-    -v                enable verbosity 
+    -v                enable \verbosity 
     -t {1,2,3}        run one of the available tests
 ```
 
