@@ -46,7 +46,7 @@ The _config.json_ file has been defined to manage the network settings (IP addre
 Tests can be performed as follows:
 
 ```
-go run launch.go -t {1,2,3} -n {\>=4}
+go run launch.go -t {1,2,3} -n {>=4}
 ```
 
 The tests are:
