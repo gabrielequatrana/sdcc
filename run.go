@@ -44,9 +44,12 @@ func main() {
 		fmt.Println("Program killed!")
 
 		// Exec command 'docker compose down'
-		_, err := exec.Command(shell, arg, "start", "docker", "compose", "down").Output()
+		cmd := exec.Command(shell, arg, "docker compose down")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err := cmd.Run()
 		if err != nil {
-			log.Fatalln("Command exec error: ", err)
+			log.Fatalln("Command exec error 3: ", err)
 		}
 
 		// Exec command 'docker rmi all'
@@ -54,7 +57,6 @@ func main() {
 		//if err != nil {
 		//	log.Fatalln("Command exec error: ", err)
 		//}
-
 		// Delete all images
 		//for i := 0; i < len(out); i += 13 {
 		//	cmd = exec.Command(shell, arg, "docker", "rmi", string(out[i:i+12]))
@@ -178,16 +180,19 @@ func main() {
 
 	// Exec command 'docker compose build'
 	cmd := exec.Command(shell, arg, "docker compose build")
-	err = cmd.Start()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
 	if err != nil {
-		log.Fatalln("Command exec error: ", err)
+		log.Fatalln("Command exec error 1: ", err)
 	}
 
 	// Exec command 'docker compose up'
-	cmd = exec.Command(shell, arg, "start", "docker compose up")
-	err = cmd.Start()
-	if err != nil {
-		log.Fatalln("Command exec error: ", err)
+	cmd = exec.Command(shell, arg, "docker compose up")
+	cmd.Stdout = os.Stdout
+	err = cmd.Run()
+	if err != nil && err.Error() != "signal: interrupt" {
+		log.Fatalln("Command exec error 2: ", err)
 	}
 
 	select {}
