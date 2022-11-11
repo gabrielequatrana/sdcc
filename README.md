@@ -23,19 +23,19 @@ The program can be run on _Linux_ and _Windows_.
 
 The complete list of flags is as follows:
 
-```bash
+```
 $ go run launch.go                                                    
 
 usage: launch.go [-a {ring,bully}] [-n] [-hb] [-d] [-v] [-t {1,2,3}]
 
-Implementation of distributed election algorithms \in Go.
+Implementation of distributed election algorithms in Go.
 
 optional arguments:
     -a {ring,bully}   election algoritm   
-    -n                number of peers \in the network
-    -hb               heartbeat service repeat \time
+    -n                number of peers in the network
+    -hb               heartbeat service repeat time
     -d                maximum random delay to forwarding messages
-    -v                enable \verbosity 
+    -v                enable verbosity 
     -t {1,2,3}        run one of the available tests
 ```
 
@@ -43,13 +43,13 @@ The _config.json_ file has been defined to manage the network settings (IP addre
 
 #### Tests
 
-Test execution can be handled as:
+Tests can be performed as follows:
 
-```bash
+```
 go run launch.go -t {1,2,3} -n {\>=4}
 ```
 
-The tests are as follows:
+The tests are:
 
 - Test 1: only one peer crashes, but it's not the leader.
 - Test 2: only the leader crashes.

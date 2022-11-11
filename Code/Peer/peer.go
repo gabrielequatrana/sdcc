@@ -403,7 +403,7 @@ func removeElement(slice []Utils.Peer, peer Utils.Peer) []Utils.Peer {
 	return slice
 }
 
-// Search a int from a slice of int
+// Search an int from a slice of int
 func searchElement(slice []int, id int) bool {
 	for i := 0; i <= len(slice)-1; i++ {
 		if slice[i] == id {
