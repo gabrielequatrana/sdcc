@@ -15,20 +15,24 @@ For the execution are required:
 - [Docker](https://www.docker.com/)
 - [Docker Compose](https://docs.docker.com/compose/)
 
+To install _Docker_ and _Docker Compose_ in one go, you can download [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
 ### Local Execution
 
-The complete list of flags is the following:
+The program can be run on _Linux_ and _Windows_.
+
+The complete list of flags is as follows:
 
 ```bash
 $ go run launch.go                                                    
 
 usage: launch.go [-a {ring,bully}] [-n] [-hb] [-d] [-v] [-t {1,2,3}]
 
-Implementation of distributed election algorithms in Go.
+Implementation of distributed election algorithms \in Go.
 
 optional arguments:
     -a {ring,bully}   election algoritm   
-    -n                number of peers in the network
+    -n                number of peers \in the network
     -hb               heartbeat service repeat time
     -d                maximum random delay to forwarding messages
     -v                enable verbosity 
@@ -41,11 +45,11 @@ The _config.json_ file has been defined to manage the network settings (IP addre
 
 Test execution can be handled as:
 
-```go
-go run launch.go -t {1,2,3} -n {>=4}
+```bash
+go run launch.go -t {1,2,3} -n {\>=4}
 ```
 
-The tests are the following:
+The tests are as follows:
 
 - Test 1: only one peer crashes, but it's not the leader.
 - Test 2: only the leader crashes.

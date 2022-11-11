@@ -20,8 +20,12 @@ var crash []int  // Peer that will crash in test mode
 var shell string // Shell used to run the program
 var arg string   // Shell argument
 
+// TODO: fare che con 0 delay questo non c'è
+// TODO: flag per pulire o meno (vedere se si può fare check image poi levi dall'insieme e rimuovi solo quelle nuove)
+
 func main() {
 
+	// Get stdout to flush after
 	std := bufio.NewWriter(os.Stdout)
 
 	// Check if the OS is Windows or Linux
