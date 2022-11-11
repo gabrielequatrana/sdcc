@@ -41,7 +41,7 @@ var alg bool      // If true then Bully algorithm, else Ring algorithm
 var crash bool    // Used in test execution. If true the peer will crash
 
 // TODO RIMUOVERE CHE ELIMINA LE IMMAGINI E I CONTAINER (SENNO CANCELLO TUTTO ALLA PROF)
-// TODO Aggiungere supporto a linux con /bin/sh
+// TODO Aggiungere supporto a linux con /bin/sh (provare senza vm)
 // TODO Si possono avere shell per ogni peer?
 
 // Peer main

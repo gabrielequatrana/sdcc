@@ -177,14 +177,14 @@ func main() {
 	}
 
 	// Exec command 'docker compose build'
-	cmd := exec.Command(shell, arg, "docker", "compose", "build")
+	cmd := exec.Command(shell, arg, "docker compose build")
 	err = cmd.Start()
 	if err != nil {
 		log.Fatalln("Command exec error: ", err)
 	}
 
 	// Exec command 'docker compose up'
-	cmd = exec.Command(shell, arg, "start", "docker", "compose", "up")
+	cmd = exec.Command(shell, arg, "start", "docker compose up")
 	err = cmd.Start()
 	if err != nil {
 		log.Fatalln("Command exec error: ", err)
