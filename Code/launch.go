@@ -57,6 +57,7 @@ func main() {
 		cmd := exec.Command(shell, arg, "docker compose down")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
+		cmd.Stdin = os.Stdin
 		err = cmd.Run()
 		if err != nil {
 			log.Fatalln("Command exec error 3:", err)
@@ -195,8 +196,6 @@ func main() {
 	// Exec command 'docker compose build'
 	cmd := exec.Command(shell, arg, "docker compose build")
 	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = nil
 	err = cmd.Run()
 	if err != nil {
 		log.Fatalln("Command exec error 1:", err)
@@ -211,7 +210,6 @@ func main() {
 	// Exec command 'docker compose up'
 	cmd = exec.Command(shell, arg, "docker compose up")
 	cmd.Stdout = os.Stdout
-	cmd.Stdin = nil
 	err = cmd.Run()
 	if err != nil && err.Error() != "exit status 130" {
 		log.Fatalln("Command exec error 2:", err)

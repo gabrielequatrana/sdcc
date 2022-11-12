@@ -40,8 +40,6 @@ var ring []int    // Used only by Ring algorithm. Contains the peers that are pa
 var alg bool      // If true then Bully algorithm, else Ring algorithm
 var crash bool    // Used in test execution. If true the peer will crash
 
-// TODO Si possono avere shell per ogni peer?
-
 // Peer main
 func main() {
 
@@ -206,7 +204,7 @@ func main() {
 						// Send COORDINATOR message
 						sort.Ints(msg.ID)
 						coordinator = msg.ID[len(msg.ID)-1]
-						Utils.Print(verbose, "Peer", ID, "started the election", ring, "and "+
+						log.Println("Peer", ID, "started the election", ring, "and "+
 							"found the coordinator:", coordinator)
 						a.sendCoordinator()
 
@@ -308,8 +306,10 @@ func (t *PeerApi) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 
 // Start a new election in Bully algorithm
 func newElection(algorithm Algorithm) {
+	log.Println("Peer", ID, "is starting a new election")
 	algorithm.sendElection()
 	if (alg == Utils.BULLY) && election {
+		log.Println("Peer", ID, "is sending coordinator message to all:", coordinator)
 		algorithm.sendCoordinator()
 
 		// Check crash flag bully coordinator
@@ -329,7 +329,7 @@ func heartbeat() {
 
 		// Check if the peer has to run heartbeat service
 		if hbPeer == ID {
-			Utils.Print(verbose, "Peer", ID, "started heartbeat service")
+			log.Println("Peer", ID, "started heartbeat service")
 
 			// Send heartbeat to all peers
 			for i := 0; i <= len(peerList)-1; i++ {

@@ -18,7 +18,6 @@ var numPeer int           // Number of peers in the network
 var currentPeer = 0       // ID of the peer served
 var peerList []Utils.Peer // List of peers in the network
 var conf Utils.Conf       // Configuration of peer and register service
-var verbose = false       // Verbose flag
 
 var ch chan int // Go channel to wait all peers
 
@@ -37,11 +36,6 @@ func main() {
 	numPeer, err = strconv.Atoi(os.Getenv("PEERS"))
 	if err != nil {
 		log.Fatalln("AtoI peers number error:", err)
-	}
-
-	// Setting verbose flag
-	if os.Getenv("VERBOSE") == "1" {
-		verbose = true
 	}
 
 	// Make GO channel
@@ -79,7 +73,7 @@ func main() {
 		for currentPeer < numPeer {
 			// Wait
 		}
-		Utils.Print(verbose, "Register service built this list:", peerList)
+		log.Println("Register service built this list:", peerList)
 		for i := 0; i <= numPeer; i++ {
 			ch <- 1 // Send message to ch to resume the execution of RegisterPeer
 		}
