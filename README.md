@@ -1,6 +1,6 @@
 ## Project
 
-The aim of the project is to implement in [Go](https://go.dev/) two distributed election algorithms (_Chang and Roberts algorithm_ and _Bully algorithm_) and the following services:
+The aim of the project is to implement in [Go](https://go.dev/) two distributed election algorithms ([_Chang and Roberts algorithm_](https://en.wikipedia.org/wiki/Chang_and_Roberts_algorithm) and [_Bully algorithm_](https://en.wikipedia.org/wiki/Bully_algorithm)) and the following services:
 
 - Register service.
 - Heartbeat monitoring service.
@@ -24,18 +24,15 @@ The program can be run on _Linux_ and _Windows_.
 The complete list of flags is as follows:
 
 ```
-$ go run launch.go                                                    
+Usage: launch.go [-a {ring,bully}] [-n] [-hb] [-d] [-v] [-c] [-t {1,2,3}]
 
-usage: launch.go [-a {ring,bully}] [-n] [-hb] [-d] [-v] [-t {1,2,3}]
-
-Implementation of distributed election algorithms in Go.
-
-optional arguments:
+Arguments:
     -a {ring,bully}   election algoritm   
     -n                number of peers in the network
     -hb               heartbeat service repeat time
     -d                maximum random delay to forwarding messages
     -v                enable verbosity 
+    -c                enable clean the images after the execution
     -t {1,2,3}        run one of the available tests
 ```
 
@@ -46,7 +43,7 @@ The _config.json_ file has been defined to manage the network settings (IP addre
 Tests can be performed as follows:
 
 ```
-go run launch.go -t {1,2,3} -n {>=4}
+go run launch.go -t {1,2,3} -n {>=4} [OPTIONS]
 ```
 
 The tests are:

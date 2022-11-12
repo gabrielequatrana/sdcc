@@ -19,9 +19,7 @@ import (
 var crash []int  // Peer that will crash in test mode
 var shell string // Shell used to run the program
 var arg string   // Shell argument
-
-// TODO: fare che con 0 delay questo non c'è
-// TODO: flag per pulire o meno (vedere se si può fare check image poi levi dall'insieme e rimuovi solo quelle nuove)
+var cFlag *bool  // If true clean the environment after the execution
 
 func main() {
 
@@ -64,19 +62,22 @@ func main() {
 			log.Fatalln("Command exec error 3:", err)
 		}
 
-		// Exec command 'docker rmi all'
-		//out, err := exec.Command(shell, arg, "docker", "images", "-a", "-q").Output()
-		//if err != nil {
-		//	log.Fatalln("Command exec error: ", err)
-		//}
-		// Delete all images
-		//for i := 0; i < len(out); i += 13 {
-		//	cmd = exec.Command(shell, arg, "docker", "rmi", string(out[i:i+12]))
-		//	err = cmd.Start()
-		//	if err != nil {
-		//		log.Fatalln("Command exec error: ", err)
-		//	}
-		//}
+		if *cFlag {
+			// Exec command 'docker images'
+			out, err2 := exec.Command(shell, arg, "docker", "images", "-a", "-q").Output()
+			if err2 != nil {
+				log.Fatalln("Command exec error: ", err2)
+			}
+
+			// Delete the images
+			for i := 0; i < 26; i += 13 {
+				cmd = exec.Command(shell, arg, "docker", "rmi", string(out[i:i+12]))
+				err2 = cmd.Start()
+				if err2 != nil {
+					log.Fatalln("Command exec error: ", err2)
+				}
+			}
+		}
 
 		// Delete .env file
 		err = os.Remove(".env")
@@ -93,6 +94,7 @@ func main() {
 	dFlag := flag.Int("d", 1000, "Delay in ms to send a message")
 	hbFlag := flag.Int("hb", 2, "Heartbeat repeat time in seconds")
 	vFlag := flag.Bool("v", false, "Print debug information")
+	cFlag = flag.Bool("c", false, "Clean the images after the execution")
 	tFlag := flag.Int("t", 0, "Execute a test")
 
 	// Retrieve flags value

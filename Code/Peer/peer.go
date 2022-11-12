@@ -299,9 +299,7 @@ func (t *PeerApi) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 
 	// Random delay in ms generated only if the peer needs to send a reply
 	if replyFlag {
-		d := rand.Intn(delay)
-		Utils.Print(verbose, "Peer", ID, "generated this delay in ms:", d)
-		time.Sleep(time.Duration(d) * time.Millisecond)
+		randomDelay()
 	}
 
 	// No error to manage
@@ -372,10 +370,8 @@ func send(id []int, msg int, peer Utils.Peer, reply *Utils.Message) error {
 		Msg: msg,
 	}
 
-	// Random delay in ms
-	d := rand.Intn(delay)
-	Utils.Print(verbose, "Peer", ID, "generated this delay in ms:", d)
-	time.Sleep(time.Duration(d) * time.Millisecond)
+	// Wait a random delay
+	randomDelay()
 
 	// Connect to the receiver peer
 	cli, err := rpc.DialHTTP("tcp", peer.IP+":"+peer.Port)
@@ -391,6 +387,15 @@ func send(id []int, msg int, peer Utils.Peer, reply *Utils.Message) error {
 
 	// Return nil if there's no error
 	return nil
+}
+
+// Generate random delay in ms
+func randomDelay() {
+	if delay != 0 {
+		d := rand.Intn(delay)
+		Utils.Print(verbose, "Peer", ID, "generated this delay in ms:", d)
+		time.Sleep(time.Duration(d) * time.Millisecond)
+	}
 }
 
 // Remove a peer from a slice of peers
