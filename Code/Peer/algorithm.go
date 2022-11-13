@@ -54,15 +54,18 @@ func (r Ring) sendElection() {
 
 	// Send election message to the next peer in the
 	for i := 1; i <= len(peerList); i++ {
-		peerID := (ID + i) % len(peerList) // ID of the next peer
+
+		// Get the next peer on the ring from the list
+		peer := peerList[(ID+i)%len(peerList)]
 
 		// If the next peer on the list is the peer himself, break the loop
-		if peerID == ID {
+		if peer.ID == ID {
+			if i == 1 {
+				Utils.Print(verbose, "Peer", ID, "is the only one in the ring so it's the coordinator")
+				coordinator = ID
+			}
 			break
 		}
-
-		// Get the peer struct from the list
-		peer := peerList[peerID]
 
 		// Send message to the peer
 		Utils.Print(verbose, "Peer", ID, "sending ELECTION to", peer.ID)

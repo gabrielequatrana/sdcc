@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/joho/godotenv"
 	"log"
 	"net"
 	"net/http"
@@ -10,6 +9,8 @@ import (
 	"os"
 	"prog/Utils"
 	"strconv"
+
+	"github.com/joho/godotenv"
 )
 
 type RegisterApi int // Used to publish RPC method

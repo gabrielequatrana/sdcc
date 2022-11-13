@@ -4,22 +4,26 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/joho/godotenv"
 	"log"
 	"math/rand"
 	"os"
 	"os/exec"
 	"os/signal"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 var crash []int  // Peer that will crash in test mode
 var shell string // Shell used to run the program
 var arg string   // Shell argument
 var cFlag *bool  // If true clean the environment after the execution
+
+// TODO: glitch stdout
 
 func main() {
 
@@ -138,13 +142,27 @@ func main() {
 			fmt.Println("Running Test 2 with", *nFlag, "peers. The coordinator peer will crash")
 			mp["CRASH"] = strconv.Itoa(crash[0])
 
-		// Crash one non coordinator peer and the coordinator peer
+		// Crash at least one non coordinator peer and the coordinator peer
 		case 3:
-			crash = append(crash, rand.Intn(*nFlag-1))
+			num := rand.Intn(*nFlag - 1)
+			for i := 0; i <= num; i++ {
+				p := rand.Intn(*nFlag - 1)
+				if !search(crash, p) {
+					crash = append(crash, p)
+				} else {
+					i--
+				}
+			}
 			crash = append(crash, *nFlag-1)
-			fmt.Println("Running Test 3 with", *nFlag, "peers. The peer", crash[0], ""+
+			sort.Ints(crash)
+			fmt.Println("Running Test 3 with", *nFlag, "peers. The peers", crash[:len(crash)-1], ""+
 				"and the coordinator will crash")
-			mp["CRASH"] = strconv.Itoa(crash[0]) + ";" + strconv.Itoa(crash[1])
+
+			mp["CRASH"] = strconv.Itoa(crash[0])
+			for i := 1; i < len(crash); i++ {
+				mp["CRASH"] = mp["CRASH"] + ";" + strconv.Itoa(crash[i])
+			}
+
 		}
 
 	} else {
@@ -196,6 +214,8 @@ func main() {
 	// Exec command 'docker compose build'
 	cmd := exec.Command(shell, arg, "docker compose build")
 	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
 	err = cmd.Run()
 	if err != nil {
 		log.Fatalln("Command exec error 1:", err)
@@ -210,6 +230,8 @@ func main() {
 	// Exec command 'docker compose up'
 	cmd = exec.Command(shell, arg, "docker compose up")
 	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
 	err = cmd.Run()
 	if err != nil && err.Error() != "exit status 130" {
 		log.Fatalln("Command exec error 2:", err)
@@ -222,4 +244,14 @@ func main() {
 	}
 
 	select {}
+}
+
+// Search an int from a slice of int
+func search(slice []int, j int) bool {
+	for i := 0; i <= len(slice)-1; i++ {
+		if slice[i] == j {
+			return true
+		}
+	}
+	return false
 }
