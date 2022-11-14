@@ -23,8 +23,6 @@ var shell string // Shell used to run the program
 var arg string   // Shell argument
 var cFlag *bool  // If true clean the environment after the execution
 
-// TODO: glitch stdout
-
 func main() {
 
 	// Get stdout to flush after
