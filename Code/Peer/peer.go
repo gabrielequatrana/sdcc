@@ -342,9 +342,7 @@ func heartbeat() {
 					err := send([]int{ID}, Utils.HEARTBEAT, p, beat)
 					if err != nil {
 						// If the p is not responding, delete it from the list
-						Utils.Print(verbose, "Peer", ID, "not received BEAT response from", p.ID)
-						peerList = removeElement(peerList, p)
-						i--
+						Utils.Print(verbose, "Peer", ID, "not received HEARTBEAT response from", p.ID)
 						hbCh <- p.ID
 					}
 
@@ -396,16 +394,6 @@ func randomDelay() {
 		Utils.Print(verbose, "Peer", ID, "generated this delay in ms:", d)
 		time.Sleep(time.Duration(d) * time.Millisecond)
 	}
-}
-
-// Remove a peer from a slice of peers
-func removeElement(slice []Utils.Peer, peer Utils.Peer) []Utils.Peer {
-	for i := 0; i <= len(slice)-1; i++ {
-		if slice[i] == peer {
-			slice = append(slice[:i], slice[i+1:]...)
-		}
-	}
-	return slice
 }
 
 // Search an int from a slice of int

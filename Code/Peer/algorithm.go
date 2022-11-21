@@ -30,8 +30,6 @@ func (b Bully) sendElection() {
 			if err != nil {
 				// Peer crashed
 				Utils.Print(verbose, "Peer", ID, "can't contact", p.ID)
-				peerList = removeElement(peerList, p)
-				i--
 				continue
 			}
 
@@ -73,8 +71,6 @@ func (r Ring) sendElection() {
 		if err != nil {
 			// Peer crashed, try contacting the next one on the ring
 			Utils.Print(verbose, "Peer", ID, "can't contact", peer.ID, "try to contact next one on the ring")
-			peerList = removeElement(peerList, peer)
-			i-- // Removed an element from the list
 			continue
 		}
 
@@ -101,8 +97,6 @@ func (b Bully) sendCoordinator() {
 			if err != nil {
 				// Peer crashed
 				Utils.Print(verbose, "Peer", ID, "can't contact", p.ID)
-				peerList = removeElement(peerList, p)
-				i--
 				continue
 			}
 		}
@@ -124,8 +118,6 @@ func (r Ring) sendCoordinator() {
 			if err != nil {
 				// Peer crashed
 				Utils.Print(verbose, "Peer", ID, "can't contact", p.ID)
-				peerList = removeElement(peerList, p)
-				i--
 				continue
 			}
 		}
