@@ -216,7 +216,7 @@ func main() {
 	}
 
 	// Exec command 'docker compose build'
-	cmd := exec.Command(shell, arg, "docker compose build")
+	cmd := exec.Command(shell, arg, "docker-compose build")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
@@ -232,7 +232,7 @@ func main() {
 	}
 
 	// Exec command 'docker compose up'
-	cmd = exec.Command(shell, arg, "docker compose up")
+	cmd = exec.Command(shell, arg, "docker-compose up")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin

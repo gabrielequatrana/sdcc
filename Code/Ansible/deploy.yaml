@@ -45,5 +45,5 @@
     - name: Copy application directory
       copy:
         src: "../"
-        dest: "/home/ubuntu/"
+        dest: "/home/ubuntu/Code/"
       register: app
