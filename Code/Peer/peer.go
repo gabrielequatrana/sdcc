@@ -25,7 +25,8 @@ var peerList []Utils.Peer // List of peers in the network
 var numPeer int           // Original number of peers in the network
 var conf Utils.Conf       // Configuration of peer and register service
 var ip, port string       // IP address and port of the peer
-var verbose = false       // Verbose flag
+var v = false             // Verbose flag
+var vv = false            // Full verbose flag
 
 var coordinator int // ID of the coordinator peer
 var delay int       // Maximum delay to send a message in ms
@@ -54,9 +55,15 @@ func main() {
 		log.Fatalln("Load env file error:", err)
 	}
 
-	// Setting verbose flag
+	// Setting v flag
 	if os.Getenv("VERBOSE") == "1" {
-		verbose = true
+		v = true
+	}
+
+	// Setting vv flag
+	if os.Getenv("VERBOSE") == "2" {
+		v = true
+		vv = true
 	}
 
 	// Setting delay
@@ -142,7 +149,7 @@ func main() {
 	ID = reply.ID
 	peerList = reply.Peers
 	numPeer = len(peerList)
-	Utils.Print(verbose, "Register service assigned to this peer the id:", ID)
+	Utils.Print(v, "Register service assigned to this peer the id:", ID)
 	err = cli.Close()
 	if err != nil {
 		log.Fatalln("Error close connection with register service:", err)
@@ -161,7 +168,7 @@ func main() {
 		// Check if the peer will crash
 		if pID == ID {
 			crash = true
-			Utils.Print(verbose, "Peer", ID, "will crash later")
+			Utils.Print(v, "Peer", ID, "will crash later")
 		}
 	}
 
@@ -231,7 +238,7 @@ func main() {
 		case id := <-hbCh:
 
 			// Peer with id is down
-			Utils.Print(verbose, "Peer", ID, "know that peer", id, "is down")
+			Utils.Print(v, "Peer", ID, "know that peer", id, "is down")
 
 			// If the peer down is the coordinator make a new election
 			if id == coordinator && !election {
@@ -255,14 +262,14 @@ func (t *PeerApi) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 
 		// Check algorithm type
 		if alg == Utils.BULLY {
-			Utils.Print(verbose, "Peer", ID, "received ELECTION from", args.ID[0])
+			Utils.Print(v, "Peer", ID, "received ELECTION from", args.ID[0])
 			replyFlag = true     // Peer needs to send OK message
 			reply.Msg = Utils.OK // Send OK message in response
 			ch <- *args          // Send message to channel
 		} else if alg == Utils.RING {
-			Utils.Print(verbose, "Peer", ID, "received ELECTION from", args.ID[len(args.ID)-1])
+			Utils.Print(v, "Peer", ID, "received ELECTION from", args.ID[len(args.ID)-1])
 			if !searchElement(ring, ID) {
-				Utils.Print(verbose, "Peer", ID, "joined the election:", append(args.ID, ID))
+				Utils.Print(v, "Peer", ID, "joined the election:", append(args.ID, ID))
 			}
 			ring = args.ID // Add peer id to the election
 			ch <- *args    // Send message to channel
@@ -270,7 +277,7 @@ func (t *PeerApi) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 
 	// COORDINATOR message
 	case Utils.COORDINATOR:
-		Utils.Print(verbose, "Peer", ID, "recognized", args.ID[0], "as coordinator")
+		Utils.Print(v, "Peer", ID, "recognized", args.ID[0], "as coordinator")
 
 		// Reset ring if using ring algorithm
 		if alg == Utils.RING {
@@ -287,7 +294,7 @@ func (t *PeerApi) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 
 	// HEARTBEAT message
 	case Utils.HEARTBEAT:
-		Utils.Print(verbose, "Peer", ID, "received HEARTBEAT from", args.ID[0])
+		Utils.Print(v, "Peer", ID, "received HEARTBEAT from", args.ID[0])
 
 		// Set reply msg parameters
 		reply.ID = []int{ID}
@@ -336,19 +343,19 @@ func heartbeat() {
 				p := peerList[i]
 				beat := new(Utils.Message)
 				if p.ID != ID {
-					Utils.Print(verbose, "Peer", ID, "sending HEARTBEAT to", p.ID)
+					Utils.Print(v, "Peer", ID, "sending HEARTBEAT to", p.ID)
 
 					// Send heartbeat to p, if p crashed send ERROR to heartbeat channel
 					err := send([]int{ID}, Utils.HEARTBEAT, p, beat)
 					if err != nil {
 						// If the p is not responding, delete it from the list
-						Utils.Print(verbose, "Peer", ID, "not received HEARTBEAT response from", p.ID)
+						Utils.Print(v, "Peer", ID, "not received HEARTBEAT response from", p.ID)
 						hbCh <- p.ID
 					}
 
 					// If the peer responds than it is alive
 					if beat.Msg == Utils.HEARTBEAT {
-						Utils.Print(verbose, "Peer", ID, "says", beat.ID[0], "is alive")
+						Utils.Print(v, "Peer", ID, "says", beat.ID[0], "is alive")
 					}
 				}
 			}
@@ -391,7 +398,7 @@ func send(id []int, msg int, peer Utils.Peer, reply *Utils.Message) error {
 func randomDelay() {
 	if delay != 0 {
 		d := rand.Intn(delay)
-		Utils.Print(verbose, "Peer", ID, "generated this delay in ms:", d)
+		Utils.Print(vv, "Peer", ID, "generated this delay in ms:", d)
 		time.Sleep(time.Duration(d) * time.Millisecond)
 	}
 }

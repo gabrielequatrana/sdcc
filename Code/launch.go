@@ -96,7 +96,8 @@ func main() {
 	nFlag := flag.Int("n", 0, "Number of peers (at least 2)")
 	dFlag := flag.Int("d", 1000, "Delay in ms to send a message")
 	hbFlag := flag.Int("hb", 2, "Heartbeat repeat time in seconds")
-	vFlag := flag.Bool("v", false, "Print debug information")
+	vFlag := flag.Bool("v", false, "Print some debug information")
+	vvFlag := flag.Bool("vv", false, "Print all debug information")
 	cFlag = flag.Bool("c", false, "Clean the images after the execution")
 	tFlag := flag.Int("t", 0, "Execute a test")
 
@@ -183,9 +184,14 @@ func main() {
 	// Set number of peers in .env file
 	mp["PEERS"] = strconv.Itoa(*nFlag)
 
-	// Set VERBOSE in .env file
+	// Set verbose in .env file
 	if *vFlag {
 		mp["VERBOSE"] = "1"
+	}
+
+	// Set verbose in .env file
+	if *vvFlag {
+		mp["VERBOSE"] = "2"
 	}
 
 	// Set hbTime in .env file

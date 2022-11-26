@@ -25,19 +25,19 @@ func (b Bully) sendElection() {
 		if p.ID > ID {
 
 			// Send message to p
-			Utils.Print(verbose, "Peer", ID, "sending ELECTION to", p.ID)
+			Utils.Print(v, "Peer", ID, "sending ELECTION to", p.ID)
 			err := send([]int{ID}, Utils.ELECTION, p, &reply)
 			if err != nil {
 				// Peer crashed
-				Utils.Print(verbose, "Peer", ID, "can't contact", p.ID)
+				Utils.Print(v, "Peer", ID, "can't contact", p.ID)
 				continue
 			}
 
 			// If the current peer receive an OK message, it exits the election
-			Utils.Print(verbose, "Peer", ID, "received OK message from", p.ID)
+			Utils.Print(v, "Peer", ID, "received OK message from", p.ID)
 			if reply.Msg == Utils.OK && election {
 				election = false
-				Utils.Print(verbose, "Peer", ID, "exits the election")
+				Utils.Print(v, "Peer", ID, "exits the election")
 			}
 		}
 	}
@@ -59,18 +59,18 @@ func (r Ring) sendElection() {
 		// If the next peer on the list is the peer himself, break the loop
 		if peer.ID == ID {
 			if i == 1 {
-				Utils.Print(verbose, "Peer", ID, "is the only one in the ring so it's the coordinator")
+				Utils.Print(v, "Peer", ID, "is the only one in the ring so it's the coordinator")
 				coordinator = ID
 			}
 			break
 		}
 
 		// Send message to the peer
-		Utils.Print(verbose, "Peer", ID, "sending ELECTION to", peer.ID)
+		Utils.Print(v, "Peer", ID, "sending ELECTION to", peer.ID)
 		err := send(ring, Utils.ELECTION, peer, &reply)
 		if err != nil {
 			// Peer crashed, try contacting the next one on the ring
-			Utils.Print(verbose, "Peer", ID, "can't contact", peer.ID, "try to contact next one on the ring")
+			Utils.Print(v, "Peer", ID, "can't contact", peer.ID, "try to contact next one on the ring")
 			continue
 		}
 
@@ -84,19 +84,19 @@ func (b Bully) sendCoordinator() {
 
 	// Set coordinator as peer id
 	coordinator = ID
-	Utils.Print(verbose, "Peer", ID, "recognized as COORDINATOR itself")
+	Utils.Print(v, "Peer", ID, "recognized as COORDINATOR itself")
 
 	// Send COORDINATOR to peers
 	for i := 0; i <= len(peerList)-1; i++ {
 		p := peerList[i]
 		if p.ID != ID {
-			Utils.Print(verbose, "Peer", ID, "sending COORDINATOR to", p.ID)
+			Utils.Print(v, "Peer", ID, "sending COORDINATOR to", p.ID)
 
 			// Send message to p
 			err := send([]int{ID}, Utils.COORDINATOR, p, &reply)
 			if err != nil {
 				// Peer crashed
-				Utils.Print(verbose, "Peer", ID, "can't contact", p.ID)
+				Utils.Print(v, "Peer", ID, "can't contact", p.ID)
 				continue
 			}
 		}
@@ -111,13 +111,13 @@ func (r Ring) sendCoordinator() {
 	for i := 0; i <= len(peerList)-1; i++ {
 		p := peerList[i]
 		if p.ID != ID {
-			Utils.Print(verbose, "Peer", ID, "sending COORDINATOR to", p.ID)
+			Utils.Print(v, "Peer", ID, "sending COORDINATOR to", p.ID)
 
 			// Send message to p
 			err := send([]int{coordinator}, Utils.COORDINATOR, p, &reply)
 			if err != nil {
 				// Peer crashed
-				Utils.Print(verbose, "Peer", ID, "can't contact", p.ID)
+				Utils.Print(v, "Peer", ID, "can't contact", p.ID)
 				continue
 			}
 		}

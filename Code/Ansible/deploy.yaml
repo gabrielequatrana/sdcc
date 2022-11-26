@@ -1,8 +1,13 @@
 ---
-- name: install Docker
+- name: Install Go and Docker
   hosts: all
   become: true
   tasks:
+    - name: Install Golang
+      ansible.builtin.apt:
+        name: golang-go
+        state: latest
+
     - name: Install apt-transport-https
       ansible.builtin.apt:
         name:
@@ -34,10 +39,10 @@
         state: latest
         update_cache: true
 
-- name: application execution
+- name: Copy application
   hosts: all
   tasks:
-    - name: copy application directory
+    - name: Copy application directory
       copy:
         src: "../"
         dest: "/home/ubuntu/"
