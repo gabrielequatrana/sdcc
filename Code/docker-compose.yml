@@ -6,14 +6,12 @@ services:
     hostname: register
     build:
       context: ..
-      dockerfile: /Code/Docker/register_dockerfile
+      dockerfile: ./Code/Docker/register_dockerfile
     network_mode: host
   peer_service:
-    #container_name: peer
-    #hostname: peer
     build:
       context: ..
-      dockerfile: /Code/Docker/peer_dockerfile
+      dockerfile: ./Code/Docker/peer_dockerfile
     depends_on:
       - registration_service
     deploy:

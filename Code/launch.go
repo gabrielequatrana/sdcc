@@ -185,7 +185,7 @@ func main() {
 	mp["PEERS"] = strconv.Itoa(*nFlag)
 
 	// Set verbose in .env file
-	if *vFlag {
+	if *vFlag && !*vvFlag {
 		mp["VERBOSE"] = "1"
 	}
 
