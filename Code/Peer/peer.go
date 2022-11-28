@@ -20,28 +20,27 @@ import (
 
 type PeerApi int // Used to publish RPC method
 
-var ID int                // Peer id
+var ID int                // Peer ID
 var peerList []Utils.Peer // List of peers in the network
-var numPeer int           // Original number of peers in the network
+var numPeer int           // Number of peers in the network
 var conf Utils.Conf       // Configuration of peer and register service
 var ip, port string       // IP address and port of the peer
 var v = false             // Verbose flag
-var vv = false            // Full verbose flag
+var vv = false            // Full verbose flag (include debug information about delay)
 
 var coordinator int // ID of the coordinator peer
 var delay int       // Maximum delay to send a message in ms
-var hbTime int      // Repetition interval of heartbeat service
+var hbTime int      // Duration of the shift of the heartbeat service
 var hbPeer int      // ID of the peer that can run the heartbeat service
 
-var ch chan Utils.Message // Go channel to manage messages
-var hbCh chan int         // Go channel to manage heartbeat messages
+var ch chan Utils.Message // Go channel to handle messages
+var hbCh chan int         // Go channel to handle heartbeat messages
 
 var election bool // Used only by Bully algorithm. If true, the peer is part of an election
 var ring []int    // Used only by Ring algorithm. Contains the peers that are part of the election
 var alg bool      // If true then Bully algorithm, else Ring algorithm
 var crash bool    // Used in test execution. If true the peer will crash
 
-// Peer main
 func main() {
 
 	log.Println("Peer service startup, reading config and .env files")
@@ -105,7 +104,7 @@ func main() {
 		log.Fatalln("Unmarshal configuration file error:", err)
 	}
 
-	// Registering RPC API
+	// Register RPC method
 	err = rpc.RegisterName("Peer", new(PeerApi))
 	rpc.HandleHTTP()
 
@@ -180,8 +179,8 @@ func main() {
 		}
 	}()
 
-	// Initially the peer with higher id starts the election to reduce messages number
-	if ID == peerList[len(peerList)-1].ID {
+	// Initially the peer with lower id starts the election
+	if ID == peerList[0].ID {
 		newElection(a)
 	}
 
@@ -191,8 +190,9 @@ func main() {
 	go heartbeat()
 
 	// Infinite loop executed by peer.
-	// Wait for message received in channel and call functions.
 	for {
+
+		// Wait for message received by channels.
 		select {
 
 		// Peer received an ELECTION message
@@ -211,11 +211,10 @@ func main() {
 						// Send COORDINATOR message
 						sort.Ints(msg.ID)
 						coordinator = msg.ID[len(msg.ID)-1]
-						log.Println("Peer", ID, "started the election", ring, "and "+
-							"found the coordinator:", coordinator)
+
 						a.sendCoordinator()
 
-						// Check crash flag
+						// Check crash flag for Ring algorithm
 						if crash {
 							os.Exit(0)
 						}
@@ -240,7 +239,7 @@ func main() {
 			// Peer with id is down
 			Utils.Print(v, "Peer", ID, "know that peer", id, "is down")
 
-			// If the peer down is the coordinator make a new election
+			// If the coordinator crashed start a new election
 			if id == coordinator && !election {
 				newElection(a)
 			}
@@ -264,14 +263,14 @@ func (t *PeerApi) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 		if alg == Utils.BULLY {
 			Utils.Print(v, "Peer", ID, "received ELECTION from", args.ID[0])
 			replyFlag = true     // Peer needs to send OK message
-			reply.Msg = Utils.OK // Send OK message in response
+			reply.Msg = Utils.OK // Send OK message as reply
 			ch <- *args          // Send message to channel
 		} else if alg == Utils.RING {
 			Utils.Print(v, "Peer", ID, "received ELECTION from", args.ID[len(args.ID)-1])
 			if !searchElement(ring, ID) {
 				Utils.Print(v, "Peer", ID, "joined the election:", append(args.ID, ID))
 			}
-			ring = args.ID // Add peer id to the election
+			ring = args.ID // Copy the election pool to the peer
 			ch <- *args    // Send message to channel
 		}
 
@@ -331,31 +330,31 @@ func heartbeat() {
 
 	// Execute an infinite loop
 	for {
-		// Repeat every hbTime*numPeer seconds
+		// Repeat every hbTime*numPeers seconds
 		time.Sleep(time.Second * time.Duration(hbTime))
 
 		// Check if the peer has to run heartbeat service
 		if hbPeer == ID {
 			log.Println("Peer", ID, "started heartbeat service")
 
-			// Send heartbeat to all peers
+			// Send heartbeat message to all peers
 			for i := 0; i <= len(peerList)-1; i++ {
 				p := peerList[i]
-				beat := new(Utils.Message)
+				beatReply := new(Utils.Message)
 				if p.ID != ID {
 					Utils.Print(v, "Peer", ID, "sending HEARTBEAT to", p.ID)
 
-					// Send heartbeat to p, if p crashed send ERROR to heartbeat channel
-					err := send([]int{ID}, Utils.HEARTBEAT, p, beat)
+					// Send heartbeat to p
+					err := send([]int{ID}, Utils.HEARTBEAT, p, beatReply)
 					if err != nil {
-						// If the p is not responding, delete it from the list
-						Utils.Print(v, "Peer", ID, "not received HEARTBEAT response from", p.ID)
+						// If p crashed send ERROR to heartbeat channel
+						Utils.Print(v, "Peer", ID, "not received HEARTBEAT reply from", p.ID)
 						hbCh <- p.ID
 					}
 
 					// If the peer responds than it is alive
-					if beat.Msg == Utils.HEARTBEAT {
-						Utils.Print(v, "Peer", ID, "says", beat.ID[0], "is alive")
+					if beatReply.Msg == Utils.HEARTBEAT {
+						Utils.Print(v, "Peer", ID, "says", beatReply.ID[0], "is alive")
 					}
 				}
 			}

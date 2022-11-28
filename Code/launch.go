@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"log"
@@ -18,19 +17,15 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var crash []int  // Peer that will crash in test mode
+var crash []int  // Peers that will crash while running a test
 var shell string // Shell used to run the program
 var arg string   // Shell argument
 var cFlag *bool  // If true clean the environment after the execution
 
 func main() {
 
-	// Get stdout to flush after
-	std := bufio.NewWriter(os.Stdout)
-
 	// Check if the OS is Windows or Linux
-	OS := runtime.GOOS
-	switch OS {
+	switch runtime.GOOS {
 	case "windows":
 		fmt.Println("Running on Windows")
 		shell = "cmd.exe"
@@ -44,32 +39,29 @@ func main() {
 
 	// Handle SIGINT
 	go func() {
+
+		// Wait for SIGINT
 		sigCh := make(chan os.Signal)
 		signal.Notify(sigCh, os.Interrupt)
 		<-sigCh
-		fmt.Println("Program killed!")
+		fmt.Println("Closing the application")
 
-		// Flush stdout
-		err := std.Flush()
-		if err != nil {
-			log.Fatalln("Flush error 3:", err)
-		}
-
-		// Exec command 'docker compose down'
-		cmd := exec.Command(shell, arg, "docker compose down")
+		// Exec command 'docker-compose down'
+		cmd := exec.Command(shell, arg, "docker-compose down")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Stdin = os.Stdin
-		err = cmd.Run()
+		err := cmd.Run()
 		if err != nil {
-			log.Fatalln("Command exec error 3:", err)
+			log.Fatalln("Command exec error \"docker-compose down\":", err)
 		}
 
+		// Clear the environment if the flag is set
 		if *cFlag {
 			// Exec command 'docker images'
-			out, err2 := exec.Command(shell, arg, "docker", "images", "-a", "-q").Output()
+			out, err2 := exec.Command(shell, arg, "docker images -a -q").Output()
 			if err2 != nil {
-				log.Fatalln("Command exec error: ", err2)
+				log.Fatalln("Command exec error \"docker images -a -q\":", err2)
 			}
 
 			// Delete the images
@@ -77,7 +69,7 @@ func main() {
 				cmd = exec.Command(shell, arg, "docker", "rmi", string(out[i:i+12]))
 				err2 = cmd.Start()
 				if err2 != nil {
-					log.Fatalln("Command exec error: ", err2)
+					log.Fatalln("Command exec error \"docker rmi\":", err2)
 				}
 			}
 		}
@@ -94,12 +86,12 @@ func main() {
 	// Set application flags
 	aFlag := flag.String("a", "", "Election algorithm (select \"bully\" or \"ring\")")
 	nFlag := flag.Int("n", 0, "Number of peers (at least 2)")
-	dFlag := flag.Int("d", 1000, "Delay in ms to send a message")
-	hbFlag := flag.Int("hb", 2, "Heartbeat repeat time in seconds")
+	dFlag := flag.Int("d", 200, "Maximum random delay to forwarding messages")
+	hbFlag := flag.Int("hb", 2, "Duration of heartbeat service shift")
 	vFlag := flag.Bool("v", false, "Print some debug information")
 	vvFlag := flag.Bool("vv", false, "Print all debug information")
-	cFlag = flag.Bool("c", false, "Clean the images after the execution")
-	tFlag := flag.Int("t", 0, "Execute a test")
+	cFlag = flag.Bool("c", false, "Clean the environment after the execution")
+	tFlag := flag.Int("t", 0, "Execute a test (select 1, 2 or 3")
 
 	// Retrieve flags value
 	flag.Parse()
@@ -165,8 +157,7 @@ func main() {
 		}
 
 	} else {
-		// Non test mode
-		mp["CRASH"] = "-1"
+		mp["CRASH"] = "-1" // Not running a test
 	}
 
 	// Create and open .env file
@@ -184,12 +175,12 @@ func main() {
 	// Set number of peers in .env file
 	mp["PEERS"] = strconv.Itoa(*nFlag)
 
-	// Set verbose in .env file
+	// Set verbosity in .env file
 	if *vFlag && !*vvFlag {
 		mp["VERBOSE"] = "1"
 	}
 
-	// Set verbose in .env file
+	// Set full verbosity in .env file
 	if *vvFlag {
 		mp["VERBOSE"] = "2"
 	}
@@ -215,36 +206,25 @@ func main() {
 		log.Fatalln("Close env error:", err)
 	}
 
-	// Exec command 'docker compose build'
+	// Exec command 'docker-compose build'
 	cmd := exec.Command(shell, arg, "docker-compose build")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 	err = cmd.Run()
 	if err != nil {
-		log.Fatalln("Command exec error 1:", err)
+		log.Fatalln("Command exec error \"docker-compose build\":", err)
 	}
 
-	// Flush stdout
-	err = std.Flush()
-	if err != nil {
-		log.Fatalln("Flush error 1:", err)
-	}
-
-	// Exec command 'docker compose up'
+	// Exec command 'docker-compose up'
 	cmd = exec.Command(shell, arg, "docker-compose up")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 	err = cmd.Run()
+	// The application handle the SIGINT error (exit status 130)
 	if err != nil && err.Error() != "exit status 130" {
-		log.Fatalln("Command exec error 2:", err)
-	}
-
-	// Flush stdout
-	err = std.Flush()
-	if err != nil {
-		log.Fatalln("Flush error 2:", err)
+		log.Fatalln("Command exec error \"docker-compose up\":", err)
 	}
 
 	select {}

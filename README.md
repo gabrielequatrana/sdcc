@@ -53,7 +53,7 @@ The tests are:
 - Test 2: only the leader crashes.
 - Test 3: at least one peer and the leader crash.
 
-## Deploy with AWS EC2 instance
+## Deploy on AWS EC2 instance
 
 [Ansible](https://docs.ansible.com/) service has been used to automate the installation of _Go_ and _Docker_ and to copy application code.
 

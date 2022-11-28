@@ -16,13 +16,12 @@ import (
 type RegisterApi int // Used to publish RPC method
 
 var numPeer int           // Number of peers in the network
-var currentPeer = 0       // ID of the peer served
+var currentPeer = 0       // ID of the current peer served
 var peerList []Utils.Peer // List of peers in the network
 var conf Utils.Conf       // Configuration of peer and register service
 
-var ch chan int // Go channel to wait all peers
+var ch chan int // Go channel to wait for all peers to complete registration
 
-// Register service main
 func main() {
 
 	log.Println("Register service startup, reading config and env files")
@@ -54,7 +53,7 @@ func main() {
 		log.Fatalln("Unmarshal config file error:", err)
 	}
 
-	// Registering the RPC API to export
+	// Registering the RPC method
 	err = rpc.RegisterName("Register", new(RegisterApi))
 	if err != nil {
 		log.Fatalln("RegisterName error:", err)
@@ -87,7 +86,7 @@ func main() {
 	}
 }
 
-// RegisterPeer Exported API to register peer in the network
+// RegisterPeer Exported method that peers call to register on the network
 func (t *RegisterApi) RegisterPeer(args *Utils.Peer, reply *Utils.RegistrationReply) error {
 
 	// Retrieve peer port
@@ -96,7 +95,7 @@ func (t *RegisterApi) RegisterPeer(args *Utils.Peer, reply *Utils.RegistrationRe
 		log.Fatalln("AtoI peer port error:", err)
 	}
 
-	// Create Peer struct to send
+	// Create Peer struct to add to list
 	peer := Utils.Peer{
 		ID:   currentPeer,
 		IP:   args.IP,
@@ -106,7 +105,7 @@ func (t *RegisterApi) RegisterPeer(args *Utils.Peer, reply *Utils.RegistrationRe
 	// Add registered peer to the list
 	peerList = append(peerList, peer)
 
-	// Fill the reply with peer ID and peer list
+	// Add to the reply the peer ID
 	reply.ID = currentPeer
 
 	// Increment currentPeer
@@ -115,7 +114,7 @@ func (t *RegisterApi) RegisterPeer(args *Utils.Peer, reply *Utils.RegistrationRe
 	// Wait all peers before sends reply
 	<-ch
 
-	// Fill the reply with peer ID and peer list
+	// Add to the reply the peer list
 	reply.Peers = peerList
 
 	return nil

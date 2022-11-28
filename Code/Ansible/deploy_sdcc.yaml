@@ -1,5 +1,5 @@
 ---
-- name: Install Go and Docker
+- name: Setup environment
   hosts: all
   become: true
   tasks:
@@ -39,7 +39,7 @@
         state: latest
         update_cache: true
 
-- name: Copy application
+- name: Setup application
   hosts: all
   tasks:
     - name: Copy application directory
