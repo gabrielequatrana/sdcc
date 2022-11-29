@@ -66,7 +66,7 @@ func main() {
 
 			// Delete the images
 			for i := 0; i < 26; i += 13 {
-				cmd = exec.Command(shell, arg, "docker", "rmi", string(out[i:i+12]))
+				cmd = exec.Command(shell, arg, "docker rmi "+string(out[i:i+12]))
 				err2 = cmd.Start()
 				if err2 != nil {
 					log.Fatalln("Command exec error \"docker rmi\":", err2)
@@ -222,8 +222,8 @@ func main() {
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 	err = cmd.Run()
-	// The application handle the SIGINT error (exit status 130)
-	if err != nil && err.Error() != "exit status 130" {
+	// The application handle the SIGINT error
+	if err != nil && err.Error() != "exit status 130" && err.Error() != "signal: interrupt" {
 		log.Fatalln("Command exec error \"docker-compose up\":", err)
 	}
 
