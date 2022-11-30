@@ -44,7 +44,7 @@ func (b Bully) sendElection() {
 			Utils.Print(v, "Peer", ID, "received OK message from", p.ID)
 			if reply.Msg == Utils.OK && election {
 				election = false
-				Utils.Print(v, "Peer", ID, "exits the election")
+				Utils.Print(v, "Peer", ID, "exits the election.")
 			}
 		}
 	}
@@ -66,7 +66,7 @@ func (r Ring) sendElection() {
 		// If the next peer on the list is the peer itself, break the loop
 		if peer.ID == ID {
 			if i == 1 {
-				Utils.Print(v, "Peer", ID, "is the only one in the ring so it's the coordinator")
+				Utils.Print(v, "Peer", ID, "is the only one in the ring so it's the coordinator.")
 				coordinator = ID
 			}
 			break
@@ -77,7 +77,7 @@ func (r Ring) sendElection() {
 		err := send(ring, Utils.ELECTION, peer, &reply)
 		if err != nil {
 			// Peer offline, try contacting the next one on the ring
-			Utils.Print(v, "Peer", ID, "can't contact", peer.ID, "try to contact next one on the ring")
+			Utils.Print(v, "Peer", ID, "can't contact", peer.ID, "try to contact next one on the ring.")
 			continue
 		}
 
@@ -91,7 +91,7 @@ func (b Bully) sendCoordinator() {
 
 	// Set coordinator as peer id
 	coordinator = ID
-	log.Println("Peer", ID, "recognized as COORDINATOR itself")
+	log.Println("Peer", ID, "recognized itself as COORDINATOR.")
 
 	// Send COORDINATOR to peers
 	for i := 0; i <= len(peerList)-1; i++ {
@@ -117,9 +117,9 @@ func (r Ring) sendCoordinator() {
 	log.Println("Peer", ID, "started the election:", ring)
 
 	if coordinator == ID {
-		log.Println("Peer", ID, "recognized as COORDINATOR itself")
+		log.Println("Peer", ID, "recognized itself as COORDINATOR.")
 	} else {
-		log.Println("Peer", ID, "recognized as COORDINATOR", coordinator)
+		log.Println("Peer", ID, "recognized", coordinator, "as COORDINATOR.")
 	}
 
 	// Send COORDINATOR to peers

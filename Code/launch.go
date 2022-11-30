@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"math/rand"
 	"os"
@@ -27,12 +26,12 @@ func main() {
 	// Check if the OS is Windows or Linux
 	switch runtime.GOOS {
 	case "windows":
-		fmt.Println("Running on Windows")
+		log.Println("Running on Windows.")
 		shell = "cmd.exe"
 		arg = "/c"
 
 	case "linux":
-		fmt.Println("Running on Linux")
+		log.Println("Running on Linux.")
 		shell = "/bin/sh"
 		arg = "-c"
 	}
@@ -44,7 +43,7 @@ func main() {
 		sigCh := make(chan os.Signal)
 		signal.Notify(sigCh, os.Interrupt)
 		<-sigCh
-		fmt.Println("Closing the application")
+		log.Println("Closing the application.")
 
 		// Exec command 'docker-compose down'
 		cmd := exec.Command(shell, arg, "docker-compose down")
@@ -124,13 +123,13 @@ func main() {
 		// Crash one non coordinator peer
 		case 1:
 			crash = append(crash, rand.Intn(*nFlag-1))
-			fmt.Println("Running Test 1 with", *nFlag, "peers. The peer", crash[0], "will crash")
+			log.Println("Running Test 1 with", *nFlag, "peers. The peer", crash[0], "will crash.")
 			mp["CRASH"] = strconv.Itoa(crash[0])
 
 		// Crash the coordinator peer
 		case 2:
 			crash = append(crash, *nFlag-1)
-			fmt.Println("Running Test 2 with", *nFlag, "peers. The coordinator peer will crash")
+			log.Println("Running Test 2 with", *nFlag, "peers. The coordinator peer will crash.")
 			mp["CRASH"] = strconv.Itoa(crash[0])
 
 		// Crash at least one non coordinator peer and the coordinator peer
@@ -146,8 +145,8 @@ func main() {
 			}
 			crash = append(crash, *nFlag-1)
 			sort.Ints(crash)
-			fmt.Println("Running Test 3 with", *nFlag, "peers. The peers", crash[:len(crash)-1], ""+
-				"and the coordinator will crash")
+			log.Println("Running Test 3 with", *nFlag, "peers. Peers", crash[:len(crash)-1], ""+
+				"and the coordinator will crash.")
 
 			mp["CRASH"] = strconv.Itoa(crash[0])
 			for i := 1; i < len(crash); i++ {

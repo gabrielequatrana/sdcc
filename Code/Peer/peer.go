@@ -35,6 +35,7 @@ var hbPeer int      // ID of the peer that can run the heartbeat service
 
 var ch chan Utils.Message // Go channel to handle messages
 var hbCh chan int         // Go channel to handle heartbeat messages
+var crCh chan int         // Go channel to handle peer crash during tests
 
 var election bool // Used only by Bully algorithm. If true, the peer is part of an election
 var ring []int    // Used only by Ring algorithm. Contains the peers that are part of the election
@@ -43,7 +44,7 @@ var crash bool    // Used in test execution. If true the peer will crash
 
 func main() {
 
-	log.Println("Peer service startup, reading config and .env files")
+	log.Println("Peer service startup, reading config and .env files.")
 
 	// Set randomizer seed
 	rand.Seed(time.Now().UnixNano())
@@ -91,6 +92,7 @@ func main() {
 	// Make GO channels
 	ch = make(chan Utils.Message)
 	hbCh = make(chan int)
+	crCh = make(chan int)
 
 	// Reading config file to retrieve IP address and port
 	j, err := os.ReadFile("./config.json")
@@ -167,7 +169,7 @@ func main() {
 		// Check if the peer will crash
 		if pID == ID {
 			crash = true
-			Utils.Print(v, "Peer", ID, "will crash later")
+			Utils.Print(v, "Peer", ID, "will crash later.")
 		}
 	}
 
@@ -237,12 +239,16 @@ func main() {
 		case id := <-hbCh:
 
 			// Peer with id is down
-			Utils.Print(v, "Peer", ID, "know that peer", id, "is down")
+			Utils.Print(v, "Peer", ID, "know that peer", id, "is down.")
 
 			// If the coordinator crashed start a new election
 			if id == coordinator && !election {
 				newElection(a)
 			}
+
+		// Peer has to crash in this test
+		case <-crCh:
+			os.Exit(0)
 		}
 	}
 }
@@ -276,7 +282,12 @@ func (t *PeerApi) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 
 	// COORDINATOR message
 	case Utils.COORDINATOR:
-		Utils.Print(v, "Peer", ID, "recognized", args.ID[0], "as coordinator")
+
+		if args.ID[0] == ID {
+			log.Println("Peer", ID, "recognized itself as COORDINATOR.")
+		} else {
+			log.Println("Peer", ID, "recognized", args.ID[0], "as COORDINATOR.")
+		}
 
 		// Reset ring if using ring algorithm
 		if alg == Utils.RING {
@@ -288,12 +299,12 @@ func (t *PeerApi) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 
 		// Check crash flag non coordinator peer
 		if crash {
-			os.Exit(0)
+			crCh <- 0
 		}
 
 	// HEARTBEAT message
 	case Utils.HEARTBEAT:
-		Utils.Print(v, "Peer", ID, "received HEARTBEAT from", args.ID[0])
+		Utils.Print(vv, "Peer", ID, "received HEARTBEAT from", args.ID[0])
 
 		// Set reply msg parameters
 		reply.ID = []int{ID}
@@ -312,10 +323,9 @@ func (t *PeerApi) SendMessage(args *Utils.Message, reply *Utils.Message) error {
 
 // Start a new election in Bully algorithm
 func newElection(algorithm Algorithm) {
-	log.Println("Peer", ID, "is starting a new election")
+	log.Println("Peer", ID, "is starting a new election.")
 	algorithm.sendElection()
 	if (alg == Utils.BULLY) && election {
-		log.Println("Peer", ID, "is sending coordinator message to all:", coordinator)
 		algorithm.sendCoordinator()
 
 		// Check crash flag bully coordinator
@@ -335,26 +345,26 @@ func heartbeat() {
 
 		// Check if the peer has to run heartbeat service
 		if hbPeer == ID {
-			log.Println("Peer", ID, "started heartbeat service")
+			log.Println("Peer", ID, "started heartbeat service.")
 
 			// Send heartbeat message to all peers
 			for i := 0; i <= len(peerList)-1; i++ {
 				p := peerList[i]
 				beatReply := new(Utils.Message)
 				if p.ID != ID {
-					Utils.Print(v, "Peer", ID, "sending HEARTBEAT to", p.ID)
+					Utils.Print(vv, "Peer", ID, "sending HEARTBEAT to", p.ID)
 
 					// Send heartbeat to p
 					err := send([]int{ID}, Utils.HEARTBEAT, p, beatReply)
 					if err != nil {
 						// If p crashed send ERROR to heartbeat channel
-						Utils.Print(v, "Peer", ID, "not received HEARTBEAT reply from", p.ID)
+						Utils.Print(vv, "Peer", ID, "not received HEARTBEAT reply from", p.ID)
 						hbCh <- p.ID
 					}
 
 					// If the peer responds than it is alive
 					if beatReply.Msg == Utils.HEARTBEAT {
-						Utils.Print(v, "Peer", ID, "says", beatReply.ID[0], "is alive")
+						Utils.Print(v, "Peer", ID, "says", beatReply.ID[0], "is alive.")
 					}
 				}
 			}

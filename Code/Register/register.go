@@ -24,7 +24,7 @@ var ch chan int // Go channel to wait for all peers to complete registration
 
 func main() {
 
-	log.Println("Register service startup, reading config and env files")
+	log.Println("Register service startup, reading config and env files.")
 
 	// Load .env file
 	err := godotenv.Load()
