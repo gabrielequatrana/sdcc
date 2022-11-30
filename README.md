@@ -24,7 +24,7 @@ The program can be run on _Linux_ and _Windows_.
 The complete list of flags is as follows:
 
 ```
-Usage: launch.go [-a {ring,bully}] [-n] [-hb] [-d] [-v | vv] [-c] [-t {1,2,3}]
+Usage: launch.go [-a {ring,bully}] [-n] [-hb] [-d] [-v | vv] [-t {1,2,3}]
 
 Arguments:
     -a {ring,bully}   election algoritm
@@ -33,7 +33,6 @@ Arguments:
     -d                maximum random delay to forwarding messages
     -v                enable some verbosity 
     -vv               enable full verbosity (add debug information about delay)
-    -c                remove containers and images after the execution
     -t {1,2,3}        run one of the available tests
 ```
 
@@ -68,5 +67,5 @@ ansible-playbook -v -i hosts.ini deploy_sdcc.yaml
 ssh -i "key_ec2.pem" ubuntu@ip_ec2
 
 # Run application on EC2 instance
-sudo go run launch.go [-a {ring,bully}] [-n] [-hb] [-d] [-v | vv] [-c] [-t {1,2,3}]
+sudo go run launch.go [-a {ring,bully}] [-n] [-hb] [-d] [-v | vv] [-t {1,2,3}]
 ```

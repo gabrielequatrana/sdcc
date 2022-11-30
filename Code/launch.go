@@ -19,7 +19,6 @@ import (
 var crash []int  // Peers that will crash while running a test
 var shell string // Shell used to run the program
 var arg string   // Shell argument
-var cFlag *bool  // If true clean the environment after the execution
 
 func main() {
 
@@ -55,24 +54,6 @@ func main() {
 			log.Fatalln("Command exec error \"docker-compose down\":", err)
 		}
 
-		// Clear the environment if the flag is set
-		if *cFlag {
-			// Exec command 'docker images'
-			out, err2 := exec.Command(shell, arg, "docker images -a -q").Output()
-			if err2 != nil {
-				log.Fatalln("Command exec error \"docker images -a -q\":", err2)
-			}
-
-			// Delete the images
-			for i := 0; i < 26; i += 13 {
-				cmd = exec.Command(shell, arg, "docker rmi "+string(out[i:i+12]))
-				err2 = cmd.Start()
-				if err2 != nil {
-					log.Fatalln("Command exec error \"docker rmi\":", err2)
-				}
-			}
-		}
-
 		// Delete .env file
 		err = os.Remove(".env")
 		if err != nil {
@@ -89,7 +70,6 @@ func main() {
 	hbFlag := flag.Int("hb", 2, "Duration of heartbeat service shift")
 	vFlag := flag.Bool("v", false, "Print some debug information")
 	vvFlag := flag.Bool("vv", false, "Print all debug information")
-	cFlag = flag.Bool("c", false, "Clean the environment after the execution")
 	tFlag := flag.Int("t", 0, "Execute a test (select 1, 2 or 3")
 
 	// Retrieve flags value
